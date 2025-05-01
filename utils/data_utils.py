@@ -1,7 +1,6 @@
 import os, torch
 from torch_geometric.data import HeteroData
 
-
 def ensure_x_field(data):
     # If a node type has no .x but has .x_title_emb, copy it.
     if 'paper' in data.node_types and not hasattr(data['paper'], 'x'):
@@ -20,15 +19,20 @@ def load_snapshots(path_pattern, years, emb_dim=128, L=5,
         f = path_pattern.format(y) # e.g. "data/raw/G_{}.pt".format(y)
         if os.path.isfile(f):
             snapshots.append(ensure_x_field(torch.load(f)))
+            continue
 
-        elif generate_if_missing:
-            snap = build_dummy_snapshot(emb_dim=emb_dim, L=L)
-            snapshots.append(ensure_x_field(snap))
-            if save_generated:
-                os.makedirs(os.path.dirname(f), exist_ok=True)
-                torch.save(snap, f)
-        else:
+        from utils.dataset_builder import build_snapshot
+        if not generate_if_missing:
             raise FileNotFoundError(f"Snapshot {f} not found.")
+
+        print(f'[data_utils] snapshot {f} not found – generating on the fly …')
+        snap = build_snapshot(y, L=L)
+        snapshots.append(ensure_x_field(snap))
+
+        if save_generated:
+            os.makedirs(os.path.dirname(f), exist_ok=True)
+            torch.save(snap, f)
+
     return snapshots
 
 

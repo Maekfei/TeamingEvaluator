@@ -1,72 +1,113 @@
-# Dynamic Citation Impact Prediction
+# Dynamic Citation-Impact Prediction
 
-This repository implements the three–stage framework proposed in the prompt:
+This repository implements a three-stage framework for predicting the future citation trajectory of a scientific paper directly from the temporal bibliographic graph.
 
-1. **Temporally-aligned R-GCN** – encodes each yearly bibliometric snapshot;
-2. **Weighted embedding imputation** – fabricates a pre-publication trajectory
-   for every new paper using its metadata neighbours;
-3. **Citation time-series generator** – a GRU encodes the imputed trajectory,
-   then an MLP estimates three parameters (η, μ, σ) that define a log-normal
-   citation survival curve.
+## Framework Components
 
-The loss combines prediction error with a temporal-smoothness regulariser.
+1. **Temporally aligned R-GCN**
+   - Shared weights encode every yearly snapshot of the heterogeneous graph (papers – authors – venues – citations).
 
+2. **Weighted embedding imputation**
+   - Before the paper exists in the graph, its embedding is imputed from neighbours (authors, venue, referenced papers).
+   - A learnable scalar weight per neighbour type controls the mixture.
 
-## Installation
+3. **Citation time-series generator**
+   - A GRU consumes the 5-year pre-publication embedding sequence and an MLP head outputs the parameters η, μ, σ of a log-normal survival curve C ^ (l)=α⋅(exp(η⋅Φ((lnl−μ)/σ))−1) from which yearly citation counts are obtained.
+   - The training loss is L=L<sub>pred</sub> +β⋅L<sub>time−smooth</sub> where L<sub>time−smooth</sub> penalises sudden changes of node embeddings between consecutive years.
+
+## 1. Installation
+
 ```bash
+# 0) get the code
+https://github.com/jiaweixu98/TeamingEvaluator.git
+cd cite-impact-prediction
+
+# 1) create isolated Python ≥3.9 env (here: venv)
 python -m venv .venv
 source .venv/bin/activate
+python -m pip install --upgrade pip
 
-pip install torch==2.3.0+cu118 torchvision==0.18.0+cu118 torchaudio==2.3.0 --extra-index-url https://download.pytorch.org/whl/cu118
+# 2) install dependencies
+# GPU (CUDA 11.8) – tested on RTX A6000
+pip install torch==2.3.0+cu118 torchvision==0.18.0+cu118 \
+torchaudio==2.3.0 --extra-index-url https://download.pytorch.org/whl/cu118
 
-
-If # no data/raw/*.pt on disk yet
-python train.py --train_years 1995 1997 --test_years 1998 1999 --epochs 2
-
-
-0) get code
-git clone <this-repo-url> && cd cite-impact-prediction
-
-1) create isolated python 3.10 environment
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-
-2) install deps (cpu; for cuda see README)
+# remaining python packages
 pip install -r requirements.txt
 
-3) place yearly snapshot files into data/raw/
-Each file G_<year>.pt must contain a torch_geometric.data.HeteroData
-(see data/README_DATA.md for detailed schema)
-4) train & test
-python train.py 
---train_years 1995 2004 
---test_years  2005 2010 
---epochs 30 
---batch_size 256
+# CPU-only: remove the +cu118 tags in the pip install torch ... command
+```
 
-Results (loss, MALE, RMSLE for each horizon l=1,2,5) are printed and also
-written to runs/<timestamp>/.
+## 2. Data
 
+### 2.1 Raw sources
 
+- `/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/papernodes_remove0/paper_nodes_GNN_yearly.json.gz` – 2M PubMed papers with neighbours and yearly citation counts
+- `/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/tkg_embeddings_all_2024.npz` – 768-d SciBERT embeddings for all papers
 
-Project structure
+### 2.2 Automatic snapshot generation
+
+When a file `data/raw/G_<year>.pt` does not exist, the first call to `utils/data_utils.load_snapshots` will:
+- load the compressed JSON & NPZ
+- build a `torch_geometric.data.HeteroData` that contains all papers published ≤ year
+- write the snapshot to `data/raw/G_<year>.pt` for future runs
+
+This happens only once per year; thereafter the pre-generated .pt files are loaded instantly.
+
+## 3. Quick start
+
+### 3.1 Smoke-test (1 epoch, tiny split)
+
+```bash
+python train.py \
+  --train_years 1995 1995 \
+  --test_years 1996 1996 \
+  --hidden_dim 32 --epochs 1 --device cuda:0
+```
+
+Output (abbreviated):
+```
+Train years: [1995]
+Test years: [1996]
+Epoch 001 L_pred:2.33 L_time:0.39 Loss:2.52
+Eval MALE tensor([...]) RMSLE tensor([...])
+```
+
+No `dataset_builder loading ...` messages appear if G_1995.pt and G_1996.pt are already cached.
+
+### 3.2 Minimal experiment (2 train + 2 test years)
+
+```bash
+python train.py \
+  --train_years 1995 1996 \
+  --test_years 1997 1998 \
+  --hidden_dim 50 --epochs 30 --device cuda:0
+```
+
+GPU memory ≈ 8 GB, runtime ≈ 25 min on a single A6000.
+
+## 4. Directory structure
+
+```
 cite-impact-prediction/
 │
-├── README.md              ← Usage, data format, how the code works
+├── README.md                     ← you are here
 ├── requirements.txt
 │
-├── data/                  ← Put raw *.pt or *.pkl graphs here
-│   └── README_DATA.md     ← Expected data format (one HeteroData per year)
+├── data/
+│   ├── raw/                      ← yearly snapshots G_<year>.pt (auto-generated)
+│   └── yearly_snapshots/         ← intermediate build artefacts
 │
 ├── models/
-│   ├── rgcn_encoder.py    ← R-GCN that shares parameters across years
-│   ├── imputer.py         ← Weighted embedding imputation module
-│   ├── impact_rnn.py      ← GRU + MLP that outputs η, μ, σ
-│   └── full_model.py      ← High-level wrapper, loss, metrics
+│   ├── rgcn_encoder.py
+│   ├── imputer.py
+│   ├── impact_rnn.py
+│   └── full_model.py
 │
 ├── utils/
-│   ├── data_utils.py      ← Load snapshots, collate, negative sampling…
-│   └── metrics.py         ← MALE & RMSLE
+│   ├── dataset_builder.py        ← JSON/NPZ → HeteroData converter
+│   ├── data_utils.py             ← caching & loading helper
+│   └── metrics.py                ← MALE, RMSLE
 │
-└── train.py               ← Everything tied together
+└── train.py                      ← training / evaluation entry point
+```
