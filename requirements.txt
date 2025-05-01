@@ -1,0 +1,5 @@
+tqdm
+rich
+numpy
+pandas
+scikit-learn
