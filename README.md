@@ -11,7 +11,6 @@ This repository implements the three–stage framework proposed in the prompt:
 
 The loss combines prediction error with a temporal-smoothness regulariser.
 
-Full mathematical details are in the prompt; the code follows it exactly.
 
 ## Installation
 ```bash

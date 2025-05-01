@@ -12,11 +12,11 @@ def main():
     parser.add_argument("--train_years", nargs=2, type=int, required=True,
                         help="e.g. 1995 2004 inclusive")
     parser.add_argument("--test_years", nargs=2, type=int, required=True)
-    parser.add_argument("--hidden_dim", type=int, default=128)
+    parser.add_argument("--hidden_dim", type=int, default=50)
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--beta", type=float, default=1e-3)
+    parser.add_argument("--beta", type=float, default=.5) # regularization parameter (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
     parser.add_argument("--device", default="cuda:7" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args()
 
@@ -29,18 +29,18 @@ def main():
     snapshots = load_snapshots("data/raw/G_{}.pt", train_years + test_years)
     snapshots = [g.to(args.device) for g in snapshots]
     
-    metadata = snapshots[0].metadata()
-    in_dims = {
+    metadata = snapshots[0].metadata() #  returns a tuple containing information about the graph's structure, specifically the node types and the edge types (including their source and target node types
+    in_dims = { # input feature dimensions for each node type
         "author": snapshots[0]["author"].x.size(-1),
         "paper":  snapshots[0]["paper"].x_title_emb.size(-1),
         "venue":  snapshots[0]["venue"].x.size(-1),
     }
 
-    model = ImpactModel(metadata,
-                        in_dims,
-                        hidden_dim=args.hidden_dim,
-                        beta=args.beta).to(args.device)
-    optimizer = Adam(model.parameters(), lr=args.lr)
+    model = ImpactModel(metadata, # metadata of the graph
+                        in_dims, #
+                        hidden_dim=args.hidden_dim, # hidden_dim, the larger the more complex the model
+                        beta=args.beta).to(args.device) # beta, a regularization parameter for the model (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
+    optimizer = Adam(model.parameters(), lr=args.lr) # adapts the learning rates for each parameter individually
 
     run_dir = os.path.join("runs", time.strftime("%Y%m%d_%H%M%S"))
     os.makedirs(run_dir, exist_ok=True)
@@ -50,7 +50,7 @@ def main():
         model.train()
         optimizer.zero_grad()
         loss, log = model(snapshots, list(range(len(train_years))))
-        loss.backward()
+        loss.backward() # compute gradients
         optimizer.step()
 
         console.log(f"Epoch {epoch:03d}  " +

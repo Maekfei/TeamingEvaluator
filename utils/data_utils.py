@@ -8,16 +8,16 @@ def ensure_x_field(data):
         data['paper'].x = data['paper'].x_title_emb
     return data
 
-def load_snapshots(path_pattern, years, emb_dim=768, L=5,
+def load_snapshots(path_pattern, years, emb_dim=128, L=5,
                    generate_if_missing=True, save_generated=True):
     """
     Returns list[HeteroData] for the requested years.
     If the file path_pattern.format(year) does not exist and
     generate_if_missing=True, a random snapshot is produced.
     """
-    snapshots = []
+    snapshots = []  # list of HeteroData objects for each year
     for y in years:
-        f = path_pattern.format(y)
+        f = path_pattern.format(y) # e.g. "data/raw/G_{}.pt".format(y)
         if os.path.isfile(f):
             snapshots.append(ensure_x_field(torch.load(f)))
 
@@ -34,21 +34,21 @@ def load_snapshots(path_pattern, years, emb_dim=768, L=5,
 
 # -------------- below: optional toy data generator -------------------
 def build_dummy_snapshot(num_papers=100, num_authors=50, num_venues=10,
-                         emb_dim=768, L=5):
+                         emb_dim=128, L=5):
     """
     Creates a small random HeteroData object – useful for debugging.
     """
-    data = HeteroData()
+    data = HeteroData() 
 
     # Nodes
-    data['author'].x = torch.randn(num_authors, emb_dim)
-    data['paper'].x_title_emb = torch.randn(num_papers, emb_dim)
+    data['author'].x = torch.randn(num_authors, emb_dim)  # num_authors x emb_dim
+    data['paper'].x_title_emb = torch.randn(num_papers, 768)
     data['venue'].x = torch.randn(num_venues, emb_dim)
 
     # Edges
     # authors write papers
-    src = torch.randint(0, num_authors, (num_papers * 2,))
-    dst = torch.randint(0, num_papers, (num_papers * 2,))
+    src = torch.randint(0, num_authors, (num_papers * 2,)) # src = authors
+    dst = torch.randint(0, num_papers, (num_papers * 2,)) # dst = papers
     data['author', 'writes', 'paper'].edge_index = torch.stack([src, dst])
     data['paper', 'written_by', 'author'].edge_index = torch.stack([dst, src])
 
