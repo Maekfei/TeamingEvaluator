@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torch_scatter import scatter_mean
 
 
 class WeightedImputer(nn.Module):

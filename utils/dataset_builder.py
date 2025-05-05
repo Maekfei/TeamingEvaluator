@@ -14,10 +14,8 @@ from tqdm import tqdm
 
 
 # ------------- paths ------------------------------------------------------
-PAPER_JSON   = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/' \
-               'papernodes_remove0/paper_nodes_GNN_yearly.json.gz'
-EMB_NPZ      = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/' \
-               'tkg_embeddings_all_2024.npz'
+PAPER_JSON   = 'data/raw/paper_nodes_GNN_yearly.json.gz'
+EMB_NPZ      = 'data/raw/tkg_embeddings_all_2024.npz'
 CACHE_DIR    = 'data/yearly_snapshots'          # *.pt files go here
 META_CACHE   = os.path.join(CACHE_DIR, 'mappings.pkl')   # id ↔ idx tables
 
@@ -95,7 +93,7 @@ def build_snapshot(up_to_year: int,
     data = HeteroData()
 
     # ----- paper features -------------------------------------------------
-    x_paper  = torch.zeros(num_papers, EMB_DIM, dtype=torch.float16)
+    x_paper  = torch.zeros(num_papers, EMB_DIM, dtype=torch.float32)
     y_cit    = torch.zeros(num_papers, L,        dtype=torch.long)
     is_core  = torch.zeros(num_papers,           dtype=torch.bool)
 
@@ -112,7 +110,7 @@ def build_snapshot(up_to_year: int,
         # SPECTER 2 embedding  (falls back to zeros if missing)
         row = id2embrow.get(pid, None)
         if row is not None:
-            x_paper[p_idx] = torch.from_numpy(emb_matrix[row]).astype(np.float16)
+            x_paper[p_idx] = torch.from_numpy(emb_matrix[row])
 
         # citation labels
         for l in range(1, L + 1):

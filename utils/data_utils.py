@@ -18,7 +18,7 @@ def load_snapshots(path_pattern, years, emb_dim=128, L=5,
     for y in years:
         f = path_pattern.format(y) # e.g. "data/raw/G_{}.pt".format(y)
         if os.path.isfile(f):
-            snapshots.append(ensure_x_field(torch.load(f)))
+            snapshots.append(ensure_x_field(torch.load(f, weights_only=False)))
             continue
 
         from utils.dataset_builder import build_snapshot

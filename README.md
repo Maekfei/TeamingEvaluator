@@ -19,7 +19,7 @@ This repository implements a three-stage framework for predicting the future cit
 
 ```bash
 # 0) get the code
-https://github.com/jiaweixu98/TeamingEvaluator.git
+git clone https://github.com/jiaweixu98/TeamingEvaluator.git
 cd TeamingEvaluator
 
 # 1) create isolated Python ≥3.9 env (here: venv)
@@ -28,22 +28,19 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 
 # 2) install dependencies
-# GPU (CUDA 11.8) – tested on RTX A6000
-pip install torch==2.3.0+cu118 torchvision==0.18.0+cu118 \
-torchaudio==2.3.0 --extra-index-url https://download.pytorch.org/whl/cu118
+
+pip3 install torch --index-url https://download.pytorch.org/whl/cu118
 
 # remaining python packages
 pip install -r requirements.txt
-
-# CPU-only: remove the +cu118 tags in the pip install torch ... command
 ```
 
 ## 2. Data
 
 ### 2.1 Raw sources
 
-- `/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/papernodes_remove0/paper_nodes_GNN_yearly.json.gz` – 2M PubMed papers with neighbours and yearly citation counts
-- `/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/tkg_embeddings_all_2024.npz` – 768-d SPECTER2 embeddings for all papers
+- `data/raw/paper_nodes_GNN_yearly.json.gz` – 2M PubMed papers with neighbours and yearly citation counts
+- `data/raw/tkg_embeddings_all_2024.npz` – 768-d SPECTER2 embeddings for all papers
 
 ### 2.2 Automatic snapshot generation
 

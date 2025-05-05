@@ -52,11 +52,7 @@ class ImpactModel(nn.Module):
         # 1) encode every snapshot once
         embeddings = []
         for data in snapshots:
-            # embeddings.append(self.encoder(data))
-            data_gpu = data.to(device, non_blocking=True)
-            embeddings.append(self.encoder(data_gpu))
-            del data_gpu
-            torch.cuda.empty_cache()
+            embeddings.append(self.encoder(data))
 
         # -------- temporal smoothing regulariser -------------------- # make sure the same papers, authors, venues are not too different in the two consecutive years
         l_time = []
