@@ -23,7 +23,7 @@ META_CACHE   = os.path.join(CACHE_DIR, 'mappings.pkl')   # id ↔ idx tables
 
 
 # ------------- load the big embedding file --------------------------------
-print('[dataset_builder] loading SPECTOR 2 embeddings …')
+print('[dataset_builder] loading SPECTER 2 embeddings …')
 with np.load(EMB_NPZ, mmap_mode='r') as npz:
     emb_matrix = npz['embeddings']       # mem-mapped (N, 768) float32
     emb_ids    = npz['ids'].astype(str)  # 1-to-1 list of PubMed IDs
@@ -95,18 +95,9 @@ def build_snapshot(up_to_year: int,
     data = HeteroData()
 
     # ----- paper features -------------------------------------------------
-    x_paper  = torch.zeros(num_papers, EMB_DIM, dtype=torch.float32)
+    x_paper  = torch.zeros(num_papers, EMB_DIM, dtype=torch.float16)
     y_cit    = torch.zeros(num_papers, L,        dtype=torch.long)
     is_core  = torch.zeros(num_papers,           dtype=torch.bool)
-
-    # paper_idx_of = {}        # PubMed ID  → integer node index (≤ up_to_year)
-
-    # for pid, node in paper_json.items():
-    #     year = node['features']['PubYear']
-    #     if year > up_to_year:
-    #         continue
-    #     p_idx = PAPER2IDX[pid]
-    #     paper_idx_of[pid] = p_idx
 
     paper_idx_of = {}        # PubMed ID  → local index
 
@@ -118,10 +109,10 @@ def build_snapshot(up_to_year: int,
         paper_idx_of[pid] = p_idx
 
 
-        # SPECTOR 2 embedding  (falls back to zeros if missing)
+        # SPECTER 2 embedding  (falls back to zeros if missing)
         row = id2embrow.get(pid, None)
         if row is not None:
-            x_paper[p_idx] = torch.from_numpy(emb_matrix[row])
+            x_paper[p_idx] = torch.from_numpy(emb_matrix[row]).astype(np.float16)
 
         # citation labels
         for l in range(1, L + 1):

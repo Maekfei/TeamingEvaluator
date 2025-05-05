@@ -1,7 +1,7 @@
 from typing import Dict
 import torch
 import torch.nn as nn
-from torch_geometric.nn import RGCNConv, HeteroConv, GCNConv, SAGEConv
+from torch_geometric.nn import HeteroConv, SAGEConv
 
 
 class RGCNEncoder(nn.Module):
@@ -31,14 +31,6 @@ class RGCNEncoder(nn.Module):
         self.convs = nn.ModuleList()
         for _ in range(num_layers):
             conv = HeteroConv(
-                # {
-                #     etype: RGCNConv(
-                #         in_channels=hidden_dim,
-                #         out_channels=hidden_dim,
-                #         num_relations=1,              # 1 per (src, rel, dst)
-                #     )
-                # { etype: GCNConv(hidden_dim, hidden_dim)
-                # { etype: GCNConv(hidden_dim, hidden_dim, add_self_loops=False)
                 { etype: SAGEConv(hidden_dim, hidden_dim)
                     for etype in metadata[1]         # edge types
                 },

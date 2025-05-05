@@ -27,10 +27,12 @@ def main():
     console.print(f"[bold]Test years:[/bold]  {test_years}")
 
     snapshots = load_snapshots("data/raw/G_{}.pt", train_years + test_years)
-    snapshots = [g.to(args.device) for g in snapshots]
+    # snapshots = [g.to(args.device) for g in snapshots]
+    for g in snapshots:            # keep graphs on CPU
+        g.pin_memory()             # fast CPU→GPU copy
     
     metadata = snapshots[0].metadata() #  returns a tuple containing information about the graph's structure, specifically the node types and the edge types (including their source and target node types
-    in_dims = { # input feature dimensions for each node type
+    in_dims = {
         "author": snapshots[0]["author"].x.size(-1),
         "paper":  snapshots[0]["paper"].x_title_emb.size(-1),
         "venue":  snapshots[0]["venue"].x.size(-1),
