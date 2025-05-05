@@ -14,8 +14,10 @@ from tqdm import tqdm
 
 
 # ------------- paths ------------------------------------------------------
-PAPER_JSON   = 'data/raw/paper_nodes_GNN_yearly.json.gz'
-EMB_NPZ      = 'data/raw/tkg_embeddings_all_2024.npz'
+PAPER_JSON = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/' \
+'papernodes_remove0/paper_nodes_GNN_yearly.json.gz'
+EMB_NPZ = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/' \
+'tkg_embeddings_all_2024.npz'
 CACHE_DIR    = 'data/yearly_snapshots'          # *.pt files go here
 META_CACHE   = os.path.join(CACHE_DIR, 'mappings.pkl')   # id ↔ idx tables
 

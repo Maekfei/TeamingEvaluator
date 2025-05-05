@@ -75,7 +75,7 @@ class RGCNEncoder(nn.Module):
             out_dict = {k: [] for k in x_dict.keys()}        # collect msg per dst
 
             for etype_str, subconv in hetero_layer.convs.items():
-                src, rel, dst = etype_str
+                src, rel, dst = etype_str.split('__')         # src, rel, dst node types
                 edge_index = data[(src, rel, dst)].edge_index.to(x_dict[src].device)
                 if (edge_index.numel() == 0
                     or x_dict[src].size(0) == 0
