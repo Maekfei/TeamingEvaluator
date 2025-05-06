@@ -7,6 +7,15 @@ from rich.console import Console
 
 console = Console()
 
+# example
+# python train.py \
+#   --train_years 1995 1995 \
+#   --test_years 1996 1996 \
+#   --hidden_dim 32 --epochs 1 \
+#   --cold_start_prob 0.5 \
+#   --eval_mode team \
+#   --device cuda:0
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_years", nargs=2, type=int, required=True,
@@ -20,9 +29,9 @@ def main():
     parser.add_argument("--device", default="cuda:7" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--cold_start_prob", type=float, default=0.3,
                     help="probability that a training paper is treated as "
-                         "venue/reference-free (cold-start calibration)")
+                         "venue/reference-free (cold-start calibration)") # 1.0 = all papers are cold-start, 0.0 = no papers are cold-start
     parser.add_argument("--eval_mode", choices=["paper", "team"], default="paper",
-                    help="'paper' = original evaluation  |  'team' = counter-factual")
+                    help="'paper' = original evaluation  |  'team' = counter-factual") # when team, the input is a list of authors plus a topic; when paper, the input is a list of authors plus a paper topic, the paper's venue,  the paper's reference paper.
     args = parser.parse_args()
 
     train_years = list(range(args.train_years[0], args.train_years[1] + 1))

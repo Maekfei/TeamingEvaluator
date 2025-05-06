@@ -145,12 +145,10 @@ read all the snapshots into a list at a same time, can improve it.
 
 currently only 9k cits are used in training, the sample size is too small, the model itself is very complex (millions of nodes).
 
-Evaluate paper looks wrong, it only repeate the years.
-
 Current impute, is simple averaging, we can consider add some weights to understand different importance of the specific neibghbors.
 
-
-
 Replacing random author/venue vectors with weighted averages of paper embeddings is safe and likely beneficial.
+
 Combine dimensionality reduction, half precision, shared storage and sampled mini-batches to curb memory usage.
+
 Balance the small counter-factual set with dual-task learning, synthetic masking and stricter regularisation so the complex model does not overfit to only 9 k examples.
