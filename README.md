@@ -1,4 +1,4 @@
-# Dynamic Citation-Impact Prediction
+# Scientific Team Performance Evaluator
 
 This repository implements a three-stage framework for predicting the future citation trajectory of a scientific paper directly from the temporal bibliographic graph.
 
@@ -14,6 +14,17 @@ This repository implements a three-stage framework for predicting the future cit
 3. **Citation time-series generator**
    - A GRU consumes the 5-year pre-publication embedding sequence and an MLP head outputs the parameters η, μ, σ of a log-normal survival curve C ^ (l)=α⋅(exp(η⋅Φ((lnl−μ)/σ))−1) from which yearly citation counts are obtained.
    - The training loss is L=L<sub>pred</sub> +β⋅L<sub>time−smooth</sub> where L<sub>time−smooth</sub> penalises sudden changes of node embeddings between consecutive years.
+
+
+@@ Training options  (train.py)
+   --beta               temporal-smoothness weight
+   --hidden_dim         size of node / RNN embeddings
+   --cold_start_prob    float ∈ [0,1].  With this probability each training
+                       paper is treated as a cold-start example, i.e. its
+                       venue and reference neighbours are removed before the
+                       imputer is called.  Authors + topic remain intact.
+   --device             cuda:N  or  cpu
+
 
 ## 1. Installation
 
@@ -59,7 +70,10 @@ This happens only once per year; thereafter the pre-generated .pt files are load
 python train.py \
   --train_years 1995 1995 \
   --test_years 1996 1996 \
-  --hidden_dim 32 --epochs 1 --device cuda:0
+  --hidden_dim 32 \
+  --epochs 1 \
+  --cold_start_prob 0.5 \
+  --device cuda:0
 ```
 
 Output (abbreviated):
@@ -80,13 +94,25 @@ python train.py \
   --test_years 1997 1998 \
   --hidden_dim 50 --epochs 30 --device cuda:0
 ```
-
-GPU memory ≈ 8 GB, runtime ≈ 25 min on a single A6000.
+parser.add_argument("--train_years", nargs=2, type=int, required=True,
+                        help="e.g. 1995 2004 inclusive")
+    parser.add_argument("--test_years", nargs=2, type=int, required=True)
+    parser.add_argument("--hidden_dim", type=int, default=50)
+    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
+    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--beta", type=float, default=.5) # regularization parameter (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
+    parser.add_argument("--device", default="cuda:7" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--cold_start_prob", type=float, default=0.3,
+                    help="probability that a training paper is treated as "
+                         "venue/reference-free (cold-start calibration)")
+    parser.add_argument("--eval_mode", choices=["paper", "team"], default="paper",
+                    help="'paper' = original evaluation  |  'team' = counter-factual")
 
 ## 4. Directory structure
 
 ```
-cite-impact-prediction/
+TeamingEvaluator/
 │
 ├── README.md                     ← you are here
 ├── requirements.txt
@@ -108,3 +134,23 @@ cite-impact-prediction/
 │
 └── train.py                      ← training / evaluation entry point
 ```
+
+Todos:
+author embedding: weighted aggreagated. (now random)
+venue embedding: do an average. (now random)
+
+there are so many papers, lead to a very large graph.
+
+read all the snapshots into a list at a same time, can improve it.
+
+currently only 9k cits are used in training, the sample size is too small, the model itself is very complex (millions of nodes).
+
+Evaluate paper looks wrong, it only repeate the years.
+
+Current impute, is simple averaging, we can consider add some weights to understand different importance of the specific neibghbors.
+
+
+
+Replacing random author/venue vectors with weighted averages of paper embeddings is safe and likely beneficial.
+Combine dimensionality reduction, half precision, shared storage and sampled mini-batches to curb memory usage.
+Balance the small counter-factual set with dual-task learning, synthetic masking and stricter regularisation so the complex model does not overfit to only 9 k examples.

@@ -8,7 +8,8 @@ Author IDs, venue names and PubMed IDs are re-mapped to contiguous
 indices that are *stable across years*.
 """
 
-import gzip, json, os, pickle, numpy as np, torch
+import gzip, json, os, pickle, torch
+import numpy as np
 from torch_geometric.data import HeteroData
 from tqdm import tqdm
 
@@ -22,14 +23,7 @@ CACHE_DIR    = 'data/yearly_snapshots'          # *.pt files go here
 META_CACHE   = os.path.join(CACHE_DIR, 'mappings.pkl')   # id ↔ idx tables
 
 
-# ------------- load the big embedding file --------------------------------
-print('[dataset_builder] loading SPECTER 2 embeddings …')
-with np.load(EMB_NPZ, mmap_mode='r') as npz:
-    emb_matrix = npz['embeddings']       # mem-mapped (N, 768) float32
-    emb_ids    = npz['ids'].astype(str)  # 1-to-1 list of PubMed IDs
 
-id2embrow = {pid: i for i, pid in enumerate(emb_ids)}
-EMB_DIM   = emb_matrix.shape[1]
 
 
 # ------------- helpers: mapping tables ------------------------------------
@@ -45,7 +39,7 @@ def load_or_init_mappings():
         paper_json = json.load(f)
 
     aut2idx, ven2idx = {}, {}
-    paper2idx, idx2paper = {}, []
+    paper2idx, idx2paper = {}, [] # list as mapping table
 
     for pid, node in tqdm(paper_json.items(), desc='scan json'):
         # papers -----------------------------------------------------------
@@ -94,19 +88,28 @@ def build_snapshot(up_to_year: int,
 
     data = HeteroData()
 
+    # ------------- load the big embedding file --------------------------------
+    print('[dataset_builder] loading SPECTER 2 embeddings …')
+    with np.load(EMB_NPZ, mmap_mode='r') as npz:
+        emb_matrix = npz['embeddings']       # mem-mapped (N, 768) float32
+        emb_ids    = npz['ids'].astype(str)  # 1-to-1 list of PubMed IDs
+    print(f'[dataset_builder]   ⇒ {emb_matrix.shape[0]} embeddings')
+    print(f'[dataset_builder]   ⇒ {emb_matrix.shape[1]} dimensions')
+    id2embrow = {pid: i for i, pid in enumerate(emb_ids)}
+    EMB_DIM   = emb_matrix.shape[1]
+
     # ----- paper features -------------------------------------------------
     x_paper  = torch.zeros(num_papers, EMB_DIM, dtype=torch.float32)
     y_cit    = torch.zeros(num_papers, L,        dtype=torch.long)
     is_core  = torch.zeros(num_papers,           dtype=torch.bool)
 
     paper_idx_of = {}        # PubMed ID  → local index
-
     for pid, node in paper_json.items():
         year = node['features']['PubYear']
         if year > up_to_year:
             continue
         p_idx = len(paper_idx_of)
-        paper_idx_of[pid] = p_idx
+        paper_idx_of[pid] = p_idx # local index
 
 
         # SPECTER 2 embedding  (falls back to zeros if missing)
@@ -128,8 +131,8 @@ def build_snapshot(up_to_year: int,
     data['paper'].is_core       = is_core       # ← used inside loss fn
 
     # ----- author & venue placeholders -----------------------------------
-    data['author'].x = torch.randn(len(AUT2IDX), 50)   # small random vecs
-    data['venue' ].x = torch.randn(num_venues, 50)
+    data['author'].x = torch.randn(len(AUT2IDX), 128)   # small random vecs
+    data['venue' ].x = torch.randn(num_venues, 128) # why do not we use the aggreagated embeddings here?
 
     # ---------------- edges ----------------------------------------------
     # 1) author ⟶ paper (“writes”)

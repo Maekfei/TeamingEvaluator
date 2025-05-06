@@ -3,7 +3,6 @@ import torch.nn as nn
 from .rgcn_encoder import RGCNEncoder
 from .imputer import WeightedImputer
 from .impact_rnn import ImpactRNN
-from typing import List
 from utils.metrics import rmsle_vec, male_vec
 
 
@@ -23,6 +22,9 @@ class ImpactModel(nn.Module):
         beta=.5, # regularization parameter (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
         horizons=(1, 2, 3, 4, 5), # [1, 2, 3, 4, 5] yearly citation counts
         meta_types: tuple[str, ...] = ("author", "venue", "paper"),
+        cold_start_prob=0.0,
+        aut2idx=None,
+        idx2aut=None
     ):
         super().__init__()
         self.encoder = RGCNEncoder(metadata, in_dims, hidden_dim) # output: keys ('author', 'paper', 'venue'), values: embeddings. (num_nodes_of_that_type, hidden_dim)
@@ -30,6 +32,9 @@ class ImpactModel(nn.Module):
         self.generator = ImpactRNN(hidden_dim)
         self.beta = beta
         self.hidden_dim = hidden_dim
+        self.cold_p = cold_start_prob
+        self.aut2idx = aut2idx
+        self.idx2aut = idx2aut
 
         self.history   = len(horizons)      # number of years fed to the GRU
         self.horizons = torch.tensor(horizons, dtype=torch.float32)
@@ -49,9 +54,9 @@ class ImpactModel(nn.Module):
         self.horizons = self.horizons.to(device, non_blocking=True)
 
 
-        # 1) encode every snapshot once
+        # 1) encode every snapshot once, paper node is pretrained.
         embeddings = []
-        for data in snapshots:
+        for data in snapshots: # need multiple years for the imputer
             embeddings.append(self.encoder(data))
 
         # -------- temporal smoothing regulariser -------------------- # make sure the same papers, authors, venues are not too different in the two consecutive years
@@ -81,7 +86,8 @@ class ImpactModel(nn.Module):
         l_pred = []
         for t in years_train: # year t.
             data = snapshots[t]
-            y_true = data['paper'].y_citations.to(device).float()  # [N, L]
+            y_true = data['paper'].y_citations.to(device).float()  # [N, L], looks like did not consider the core papers
+            topic_all = embeddings[t]['paper']
             N, _ = y_true.shape
 
             # ----------------------------------------------------------
@@ -92,33 +98,37 @@ class ImpactModel(nn.Module):
                 for pid in range(N)
             ]
 
+            # -------- cold-start augmentation --------------------------
+            if self.cold_p > 0.0:
+                for nc in neigh_cache:                          # nc is a dict
+                    if torch.rand(1).item() < self.cold_p:
+                        nc.pop('venue',  None)                  # drop venue
+                        nc.pop('paper',  None)                  # drop refs
+            # ----------------------------------------------------------------
+
             # ----------------------------------------------------------
             # 3.2 build sequence  [t-1, …, t-history]
             # ----------------------------------------------------------
             seq_steps = []
-            for k in range(1, self.history + 1):
-                yr = t - k
-                if yr < 0:
-                    # zero-padding for years before dataset starts
-                    seq_k = torch.zeros(
-                        N, self.hidden_dim, device=device)
+            for k in range(self.history):
+                if k == 0:
+                    # step-0  : topic only  (no neighbours ⇒ no leakage)
+                    seq_k = topic_all                                 # [N,H]
                 else:
-                    seq_k = torch.stack(
-                        [
-                            self.imputer(
-                                pid,                     # dummy
-                                yr,
-                                snapshots,
-                                embeddings,
-                                predefined_neigh=neigh_cache[pid],
-                            )
-                            for pid in range(N)
-                        ],
-                        dim=0,
-                    )                                   # [N, hidden]
+                    yr = t - k                                        # t-1 …
+                    if yr < 0:                                        # before data starts
+                        seq_k = torch.zeros(N, self.hidden_dim, device=device)
+                    else:
+                        seq_k = torch.stack(
+                            [ self.imputer(pid, yr, snapshots, embeddings,
+                                            predefined_neigh=neigh_cache[pid],
+                                            topic_vec=topic_all[pid])   # blend topic
+                              for pid in range(N) ],
+                            dim=0,
+                        )                                             # [N,H]
                 seq_steps.append(seq_k)
 
-            V_p = torch.stack(seq_steps, dim=1)         # [N, T, hidden]
+            V_p = torch.stack(seq_steps, dim=1)    # [N,5,H]
 
             # 3.3 generate citation distribution -----------------------
             eta, mu, sigma = self.generator(V_p)
@@ -147,34 +157,154 @@ class ImpactModel(nn.Module):
     # -----------------------------------------------------------------
     @torch.no_grad()
     def evaluate(self, snapshots, years_test):
-        device = self.horizons.device
-        self.horizons = self.horizons.to(device)
+        """
+        Standard evaluation (real papers, full neighbourhood).
+        Uses the *same* sequence construction as in training – one true
+        topic vector at k=0 and one imputed vector for every past year.
+        """
+        device = next(self.parameters()).device
+        horizons = self.horizons.to(device)
 
-        embeddings = [self.encoder(data) for data in snapshots]
+        # 1) encode all snapshots once
+        embeddings = [self.encoder(g) for g in snapshots]
+
+        males, rmsles = [], []
+        for t in years_test:
+            data      = snapshots[t]
+            y_true    = data['paper'].y_citations.to(device).float()   # [N,5]
+            topic_all = embeddings[t]['paper']                         # [N,H]
+            N, _      = y_true.shape
+
+            # 2) cache neighbours of each paper in its publication year
+            neigh_cache = [
+                self.imputer.collect_neighbours(data, pid, device)
+                for pid in range(N)
+            ]
+
+            # 3) build 5-step sequence  (k = 0 … 4)
+            seq_steps = []
+            for k in range(self.history):
+                if k == 0:                             # publication day
+                    seq_k = topic_all                  # [N,H]
+                else:
+                    yr = t - k
+                    if yr < 0:                         # before data starts
+                        seq_k = torch.zeros(N, self.hidden_dim, device=device)
+                    else:
+                        seq_k = torch.stack(
+                            [ self.imputer(pid, yr, snapshots, embeddings,
+                                            predefined_neigh = neigh_cache[pid],
+                                            topic_vec        = topic_all[pid])
+                              for pid in range(N) ],
+                            dim=0,
+                        )                              # [N,H]
+                seq_steps.append(seq_k)
+
+            V_p = torch.stack(seq_steps, dim=1)        # [N,5,H]
+
+            # 4) predict citation distribution
+            eta, mu, sigma = self.generator(V_p)
+            y_hat_cum = self.generator.predict_cumulative(
+                            horizons, eta, mu, sigma)              # [N,5]
+            y_hat = torch.cat([y_hat_cum[:, :1],
+                               y_hat_cum[:, 1:] - y_hat_cum[:, :-1]], 1)
+
+            males .append(male_vec (y_true, y_hat))
+            rmsles.append(rmsle_vec(y_true, y_hat))
+
+        male  = torch.stack(males ).mean(0)    # [5]
+        rmsle = torch.stack(rmsles).mean(0)
+        return male.cpu(), rmsle.cpu()
+
+    # -----------------------------------------------------------------
+    @torch.no_grad()
+    def predict_team(self,
+                     author_ids: list[str],
+                     topic_vec: torch.Tensor,
+                     snapshots: list,
+                     current_year_idx: int):
+        """
+        Counter-factual prediction for a team (author_ids) + topic embedding.
+        Returns Tensor[5] = yearly citation counts for horizons 1…5
+        """
+        device    = next(self.parameters()).device
+        topic_vec = topic_vec.to(device)
+
+        # --- translate raw author IDs to integer indices ---------------
+        au_idx = torch.tensor(
+            [ self.aut2idx[a] for a in author_ids if a in self.aut2idx ],
+            device=device, dtype=torch.long
+        )
+        if au_idx.numel() == 0:
+            raise ValueError("None of the given author IDs is in the graph")
+
+        # --- build 5-year sequence  (clamp at first snapshot) ----------
+        seq = []
+        for k in range(5):                               # k = 0 … 4
+            yr = current_year_idx - k
+            if yr >= 0:
+                emb_dict = self.encoder(snapshots[yr])          # fresh encode
+                auth_emb = emb_dict['author'][au_idx].mean(0)   # [H]
+            else:                                               # before data start
+                auth_emb = torch.zeros(self.hidden_dim, device=device)
+
+            v_k = ( self.imputer.w['author'] * auth_emb +
+                    self.imputer.w['self']   * topic_vec )
+            seq.append(v_k)
+
+        V_p = torch.stack(seq, 0).unsqueeze(0)            # [1,5,H]
+        eta, mu, sigma = self.generator(V_p)
+        cum = self.generator.predict_cumulative(
+                  self.horizons.to(device), eta, mu, sigma)     # [1,5]
+        yearly = torch.cat([cum[:, :1], cum[:,1:] - cum[:,:-1]], 1)
+        return yearly.squeeze(0)                           # [5]
+
+
+    # -----------------------------------------------------------------
+    @torch.no_grad()
+    def evaluate_team(self, snapshots, years_test):
+        """
+        Evaluate in the counter-factual setting:
+        use only authors + topic of each core paper in test years.
+        """
+        device    = next(self.parameters()).device
+        horizons  = self.horizons.to(device)
+
+        encs = [self.encoder(g) for g in snapshots]       # cache once
 
         males, rmsles = [], []
         for t in years_test:
             data = snapshots[t]
-            y_true = data['paper'].y_citations.to(device).float()
-            N, L = y_true.shape
+            core_mask = data['paper'].is_core.to(device)
+            if core_mask.sum() == 0:
+                continue
 
-            v_t = torch.stack(
-                [self.imputer(pid, t, snapshots, embeddings) for pid in range(N)],
-                dim=0,
-            )
-            V_p = v_t.unsqueeze(1).repeat(1, 5, 1)
-            eta, mu, sigma = self.generator(V_p)
-            y_hat_cum = self.generator.predict_cumulative(
-                self.horizons.to(device), eta, mu, sigma
-            )
-            y_hat = torch.cat(
-                [y_hat_cum[:, 0:1], y_hat_cum[:, 1:] - y_hat_cum[:, :-1]],
-                dim=1,
-            )
+            y_true = data['paper'].y_citations[core_mask].float()     # [M,5]
+            topic  = encs[t]['paper'][core_mask]                      # [M,H]
 
-            males.append(male_vec(y_true, y_hat))
+            # author neighbour indices for each core paper ------------
+            neigh = [
+                self.imputer.collect_neighbours(data, pid, device)
+                for pid in core_mask.nonzero(as_tuple=False).view(-1)
+            ]
+            for d in neigh:
+                d.pop('venue',  None)
+                d.pop('paper',  None)   # keep only authors
+
+            preds = []
+            for i, d in enumerate(neigh):
+                a_local = d.get('author', torch.empty(0, device=device, dtype=torch.long))
+                if a_local.numel() == 0:
+                    preds.append(torch.zeros(5, device=device))
+                    continue
+                au_raw = [ self.idx2aut[int(j)] for j in a_local ]
+                p = self.predict_team(au_raw, topic[i], snapshots, t)
+                preds.append(p)
+            y_hat = torch.stack(preds, 0)
+
+            males .append(male_vec (y_true, y_hat))
             rmsles.append(rmsle_vec(y_true, y_hat))
 
-        male = torch.stack(males).mean(0)    # [L]
+        male  = torch.stack(males ).mean(0)
         rmsle = torch.stack(rmsles).mean(0)
         return male.cpu(), rmsle.cpu()

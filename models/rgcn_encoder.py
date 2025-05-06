@@ -87,7 +87,6 @@ class RGCNEncoder(nn.Module):
                 # edge_type = edge_index.new_zeros(edge_index.size(1))
 
                 # message passing
-                # out = subconv((x_dict[src], x_dict[dst]), edge_index, edge_type)
                 out = subconv((x_dict[src], x_dict[dst]), edge_index)
                 out_dict[dst].append(out)
 

@@ -1,4 +1,4 @@
-import argparse, os, time
+import argparse, time
 import torch
 from torch.optim import Adam
 from utils.data_utils import load_snapshots
@@ -18,6 +18,11 @@ def main():
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--beta", type=float, default=.5) # regularization parameter (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
     parser.add_argument("--device", default="cuda:7" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--cold_start_prob", type=float, default=0.3,
+                    help="probability that a training paper is treated as "
+                         "venue/reference-free (cold-start calibration)")
+    parser.add_argument("--eval_mode", choices=["paper", "team"], default="paper",
+                    help="'paper' = original evaluation  |  'team' = counter-factual")
     args = parser.parse_args()
 
     train_years = list(range(args.train_years[0], args.train_years[1] + 1))
@@ -26,9 +31,24 @@ def main():
     console.print(f"[bold]Train years:[/bold] {train_years}")
     console.print(f"[bold]Test years:[/bold]  {test_years}")
 
+    # read all snapshots (years) into a list
     snapshots = load_snapshots("data/raw/G_{}.pt", train_years + test_years)
     snapshots = [g.to(args.device) for g in snapshots]
     
+    # ------------------------------------------------------------------ #
+    #  load cached mapping tables without pulling the big embedding file #
+    # ------------------------------------------------------------------ #
+    import pickle, os
+    META_CACHE = "data/yearly_snapshots/mappings.pkl"
+
+    with open(META_CACHE, "rb") as fh:
+        _, AUT2IDX, _ = pickle.load(fh)           # we only need authors
+
+    idx2aut = [None] * len(AUT2IDX)
+    for a, i in AUT2IDX.items():
+        idx2aut[i] = a
+
+
     metadata = snapshots[0].metadata() #  returns a tuple containing information about the graph's structure, specifically the node types and the edge types (including their source and target node types
     in_dims = {
         "author": snapshots[0]["author"].x.size(-1),
@@ -39,7 +59,10 @@ def main():
     model = ImpactModel(metadata, # metadata of the graph
                         in_dims, #
                         hidden_dim=args.hidden_dim, # hidden_dim, the larger the more complex the model
-                        beta=args.beta).to(args.device) # beta, a regularization parameter for the model (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
+                        beta=args.beta, # beta, a regularization parameter for the model (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
+                        cold_start_prob=args.cold_start_prob,
+                        aut2idx=AUT2IDX,
+                        idx2aut=idx2aut).to(args.device)
     optimizer = Adam(model.parameters(), lr=args.lr) # adapts the learning rates for each parameter individually
 
     run_dir = os.path.join("runs", time.strftime("%Y%m%d_%H%M%S"))
@@ -59,11 +82,18 @@ def main():
         if epoch % 5 == 0 or epoch == args.epochs:
             model.eval()
             with torch.no_grad():
-                male, rmsle = model.evaluate(
-                    snapshots,
-                    list(range(len(train_years), len(train_years) + len(test_years)))
-                )
-            console.print(f"[green]Eval[/green] MALE {male.tolist()}  RMSLE {rmsle.tolist()}")
+                if args.eval_mode == "paper":
+                    male, rmsle = model.evaluate(
+                        snapshots,
+                        list(range(len(train_years), len(train_years)+len(test_years)))
+                    )
+                else:   # counter-factual
+                    male, rmsle = model.evaluate_team(
+                        snapshots,
+                        list(range(len(train_years), len(train_years)+len(test_years)))
+                    )
+            console.print(f"[green]Eval-{args.eval_mode}[/green] "
+                        f"MALE {male.tolist()}  RMSLE {rmsle.tolist()}")
 
     torch.save(model.state_dict(), os.path.join(run_dir, "model.pt"))
     console.print(f"Done. Model saved to {run_dir}/model.pt")

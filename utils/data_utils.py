@@ -21,11 +21,12 @@ def load_snapshots(path_pattern, years, emb_dim=128, L=5,
             snapshots.append(ensure_x_field(torch.load(f, weights_only=False)))
             continue
 
-        from utils.dataset_builder import build_snapshot
+        
         if not generate_if_missing:
             raise FileNotFoundError(f"Snapshot {f} not found.")
 
         print(f'[data_utils] snapshot {f} not found – generating on the fly …')
+        from utils.dataset_builder import build_snapshot
         snap = build_snapshot(y, L=L)
         snapshots.append(ensure_x_field(snap))
 

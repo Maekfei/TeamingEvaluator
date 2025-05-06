@@ -12,6 +12,7 @@ class WeightedImputer(nn.Module):
         self.w = nn.ParameterDict({
             m: nn.Parameter(torch.tensor(1.0)) for m in meta_types
         })
+        self.w['self'] = nn.Parameter(torch.tensor(1.0))
 
     @staticmethod
     def collect_neighbours(data, paper_id: int, device):
@@ -57,6 +58,7 @@ class WeightedImputer(nn.Module):
         snapshots,
         embeddings,
         predefined_neigh: dict[str, torch.Tensor] | None = None,
+        topic_vec=None
     ):
         """
         Args
@@ -98,6 +100,10 @@ class WeightedImputer(nn.Module):
                 continue
             parts.append(self.w[ntype] * embs[ntype][ids].mean(dim=0))
 
+        # --- add the paper’s own embedding --------------------------------
+        if topic_vec is not None:
+            parts.append(self.w['self'] * topic_vec)
+        
         if len(parts) == 0:
             return torch.zeros(embs['paper'].size(-1), device=device)
 
