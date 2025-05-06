@@ -90,9 +90,12 @@ No `dataset_builder loading ...` messages appear if G_1995.pt and G_1996.pt are 
 
 ```bash
 python train.py \
-  --train_years 1995 1996 \
-  --test_years 1997 1998 \
-  --hidden_dim 50 --epochs 30 --device cuda:0
+  --train_years 2005 2015 \
+  --test_years 2015 2019 \
+  --hidden_dim 64 \
+  --epochs 50 \
+  --cold_start_prob 0.5 \
+  --device cuda:0
 ```
 parser.add_argument("--train_years", nargs=2, type=int, required=True,
                         help="e.g. 1995 2004 inclusive")
