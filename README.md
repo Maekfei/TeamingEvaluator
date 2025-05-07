@@ -56,7 +56,8 @@ git clone https://github.com/jiaweixu98/TeamingEvaluator.git
 cd TeamingEvaluator
 
 # Create and activate virtual environment
-python -m venv .venv && source .venv/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 python -m pip install --upgrade pip
 
 # PyTorch – change URL for your CUDA/CPU build
@@ -121,11 +122,7 @@ python train.py \
 #### Typical experiment
 
 ```bash
-python train.py \
-  --train_years 2005 2015 \
-  --test_years  2016 2019 \
-  --hidden_dim 64 --epochs 300 --cold_start_prob 0.5 \
-  --beta 0.5 --device cuda:0
+python train.py   --train_years 2005 2015   --test_years  2016 2019   --hidden_dim 64 --epochs 300 --cold_start_prob 0.5   --beta 0.5 --eval_mode team --device cuda:0 --load_checkpoint runs/20250507_155655/best_model_epoch005_male0.3637_team.pt
 ```
 
 Logs and checkpoints appear in `runs/<timestamp>/`.

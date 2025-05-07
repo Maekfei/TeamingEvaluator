@@ -4,17 +4,58 @@ from torch.optim import Adam
 from utils.data_utils import load_snapshots
 from models.full_model import ImpactModel
 from rich.console import Console
+import os
+import pickle
 
 console = Console()
 
-# example
-# python train.py \
-#   --train_years 1995 1995 \
-#   --test_years 1996 1996 \
-#   --hidden_dim 32 --epochs 1 \
-#   --cold_start_prob 0.5 \
-#   --eval_mode team \
-#   --device cuda:0
+# (1) Function to store each evaluated model checkpoint
+def save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values, current_rmsle_values, args, training_loss, run_dir):
+    """
+    Saves a checkpoint of the model, optimizer, and metrics after an evaluation step.
+    The filename includes the epoch and up to the first 5 MALE values (rounded).
+    """
+    if current_male_values is None:
+        console.print("[yellow]Skipping saving evaluated model: MALE values are not available.[/yellow]")
+        return
+
+    male_components = []
+    # Ensure current_male_values is a list. It should be after processing in main.
+    num_male_values_to_include = min(5, len(current_male_values))
+
+    for i in range(num_male_values_to_include):
+        try:
+            # Round to 4 decimal places for the filename
+            male_components.append(f"male{i}_{round(float(current_male_values[i]), 4):.4f}")
+        except (ValueError, TypeError) as e:
+            console.print(f"[yellow]Warning: Could not process MALE value at index {i} for filename component: '{current_male_values[i]}'. Error: {e}[/yellow]")
+            male_components.append(f"male{i}_error")
+
+    if not male_components and current_male_values:
+         male_str = "male_values_present_but_error_in_formatting"
+    elif not male_components:
+        male_str = "no_male_values"
+    else:
+        male_str = "_".join(male_components)
+        
+    # Construct a descriptive filename
+    eval_model_filename = f"evaluated_model_epoch{epoch:03d}_{male_str}_{args.eval_mode}.pt"
+    eval_model_path = os.path.join(run_dir, eval_model_filename)
+
+    try:
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'training_loss': training_loss, # Training loss at the time of this epoch's training step
+            'eval_male': current_male_values,
+            'eval_rmsle': current_rmsle_values,
+            'args': args # Save training arguments for this specific model
+        }, eval_model_path)
+        console.print(f"[cyan]Evaluated model checkpoint saved: {eval_model_path}[/cyan]")
+    except Exception as e:
+        console.print(f"[red]Error saving evaluated model checkpoint: {e}[/red]")
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -22,16 +63,20 @@ def main():
                         help="e.g. 1995 2004 inclusive, the yeas to train on")
     parser.add_argument("--test_years", nargs=2, type=int, required=True)
     parser.add_argument("--hidden_dim", type=int, default=50)
-    parser.add_argument("--epochs", type=int, default=150)
+    parser.add_argument("--epochs", type=int, default=150, help="Total number of epochs to train for.")
     parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
     parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--beta", type=float, default=.5) # regularization parameter (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
+    parser.add_argument("--beta", type=float, default=.5) # regularization parameter
     parser.add_argument("--device", default="cuda:7" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--cold_start_prob", type=float, default=0.3,
-                    help="probability that a training paper is treated as "
-                         "venue/reference-free (cold-start calibration)") # 1.0 = all papers are cold-start, 0.0 = no papers are cold-start
+                        help="probability that a training paper is treated as "
+                             "venue/reference-free (cold-start calibration)")
     parser.add_argument("--eval_mode", choices=["paper", "team"], default="paper",
-                    help="'paper' = original evaluation  |  'team' = counter-factual") # when team, the input is a list of authors plus a topic; when paper, the input is a list of authors plus a paper topic, the paper's venue,  the paper's reference paper.
+                        help="'paper' = original evaluation  |  'team' = counter-factual")
+
+    parser.add_argument("--load_checkpoint", type=str, default=None,
+                        help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
+    
     args = parser.parse_args()
 
     train_years = list(range(args.train_years[0], args.train_years[1] + 1))
@@ -39,109 +84,160 @@ def main():
 
     console.print(f"[bold]Train years:[/bold] {train_years}")
     console.print(f"[bold]Test years:[/bold]  {test_years}")
+    console.print(f"[bold]Device:[/bold] {args.device}")
 
-    # read all snapshots (years) into a list
     snapshots = load_snapshots("data/raw/G_{}.pt", train_years + test_years)
     snapshots = [g.to(args.device) for g in snapshots]
     
-    # ------------------------------------------------------------------ #
-    #  load cached mapping tables without pulling the big embedding file #
-    # ------------------------------------------------------------------ #
-    import pickle, os
     META_CACHE = "data/yearly_snapshots/mappings.pkl"
-
     with open(META_CACHE, "rb") as fh:
-        _, AUT2IDX, _ = pickle.load(fh)           # we only need authors
+        _, AUT2IDX, _ = pickle.load(fh)
 
     idx2aut = [None] * len(AUT2IDX)
     for a, i in AUT2IDX.items():
         idx2aut[i] = a
 
-
-    metadata = snapshots[0].metadata() #  returns a tuple containing information about the graph's structure, specifically the node types and the edge types (including their source and target node types
+    metadata = snapshots[0].metadata()
     in_dims = {
         "author": snapshots[0]["author"].x.size(-1),
         "paper":  snapshots[0]["paper"].x_title_emb.size(-1),
         "venue":  snapshots[0]["venue"].x.size(-1),
     }
 
-    model = ImpactModel(metadata, # metadata of the graph
-                        in_dims, #
-                        hidden_dim=args.hidden_dim, # hidden_dim, the larger the more complex the model
-                        beta=args.beta, # beta, a regularization parameter for the model (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
+    model = ImpactModel(metadata,
+                        in_dims,
+                        hidden_dim=args.hidden_dim,
+                        beta=args.beta,
                         cold_start_prob=args.cold_start_prob,
                         aut2idx=AUT2IDX,
                         idx2aut=idx2aut).to(args.device)
-    optimizer = Adam(model.parameters(), lr=args.lr) # adapts the learning rates for each parameter individually
+    optimizer = Adam(model.parameters(), lr=args.lr)
 
-    run_dir = os.path.join("runs", time.strftime("%Y%m%d_%H%M%S"))
+    start_epoch = 1
+    loaded_checkpoint_args_info = "None" 
+
+    # --- Logic for loading a previous checkpoint ---
+    if args.load_checkpoint:
+        if os.path.exists(args.load_checkpoint):
+            try:
+                console.print(f"[cyan]Attempting to load checkpoint from: {args.load_checkpoint}[/cyan]")
+                # Load checkpoint to the specified device
+                checkpoint = torch.load(args.load_checkpoint, map_location=args.device, weights_only=False)
+                
+                model.load_state_dict(checkpoint['model_state_dict'])
+                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                
+                loaded_epoch = checkpoint.get('epoch', 0)
+                start_epoch = loaded_epoch + 1 # Resume from the next epoch
+                
+                if 'args' in checkpoint:
+                    # Store string representation for saving, not the Namespace object itself
+                    loaded_checkpoint_args_info = str(vars(checkpoint['args']))
+                    console.print(f"[magenta]Arguments from loaded checkpoint (for reference): {loaded_checkpoint_args_info}[/magenta]")
+                
+                console.print(f"[green]Checkpoint loaded successfully. Model and optimizer states restored. "
+                              f"Resuming training from epoch {start_epoch}. Current total epochs set to {args.epochs}.[/green]")
+
+                if start_epoch > args.epochs:
+                    console.print(f"[yellow]Warning: Loaded checkpoint from epoch {loaded_epoch}. "
+                                  f"The new start epoch {start_epoch} is greater than the total configured epochs {args.epochs}. "
+                                  f"Training will not run unless --epochs is increased beyond {loaded_epoch}.[/yellow]")
+            except Exception as e:
+                console.print(f"[red]Error loading checkpoint '{args.load_checkpoint}': {e}. Starting training from scratch (epoch 1).[/red]")
+                start_epoch = 1 
+        else:
+            console.print(f"[yellow]Checkpoint file not found: {args.load_checkpoint}. Starting training from scratch (epoch 1).[/yellow]")
+            start_epoch = 1
+    # --- End of loading checkpoint logic ---
+
+    run_dir_suffix = f"_{args.eval_mode}"
+    if args.load_checkpoint: # Add suffix if resuming to distinguish run directory
+        run_dir_suffix += f"_resumedFrom_{os.path.splitext(os.path.basename(args.load_checkpoint))[0]}"
+    run_dir = os.path.join("runs", time.strftime("%Y%m%d_%H%M%S") + run_dir_suffix)
     os.makedirs(run_dir, exist_ok=True)
 
-    # Initialize to track the best model based on MALE (lower is better)
     best_male_metric = float('inf')
-    best_epoch = 0
-    best_model_path = "" # To store the path of the best model
+    best_epoch_val = 0 
+    best_model_path = ""
 
     console.print(f"Run directory: {run_dir}")
-    # Save args to the run directory for reproducibility
-    if hasattr(args, '__dict__'):
-        with open(os.path.join(run_dir, "args.txt"), 'w') as f:
-            for arg in vars(args):
-                f.write(f"{arg}: {getattr(args, arg)}\n")
+    
+    current_args_path = os.path.join(run_dir, "current_run_args.txt")
+    with open(current_args_path, 'w') as f:
+        if hasattr(args, '__dict__'):
+            for arg_name, arg_val in vars(args).items():
+                f.write(f"{arg_name}: {arg_val}\n")
+        else:
+             f.write(str(args))
+    console.print(f"Current run arguments saved to {current_args_path}")
+
+    if args.load_checkpoint and loaded_checkpoint_args_info != "None":
+        loaded_args_path = os.path.join(run_dir, "loaded_checkpoint_args_info.txt")
+        with open(loaded_args_path, 'w') as f:
+            f.write(loaded_checkpoint_args_info)
+        console.print(f"Arguments info from loaded checkpoint saved to {loaded_args_path}")
+
+    # Training loop
+    if start_epoch > args.epochs:
+        console.print(f"[yellow]Training skipped: start_epoch ({start_epoch}) > total epochs ({args.epochs}).[/yellow]")
     else:
-        console.print("[yellow]Warning: 'args' object does not have __dict__, cannot save arguments easily.[/yellow]")
+        console.print(f"Starting training from epoch {start_epoch} to {args.epochs}.")
 
+    loss = None
+    log = {}
 
-    # Training loop ---------------------------------------------------
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(start_epoch, args.epochs + 1):
         model.train()
         optimizer.zero_grad()
-        loss, log = model(snapshots, list(range(len(train_years)))) # training on the first len(train_years) snapshots
-        loss.backward() # compute gradients
+        loss, log = model(snapshots, list(range(len(train_years))))
+        loss.backward()
         optimizer.step()
 
-        # Constructing the log message
         log_items_str = "  ".join(f"{k}:{v:.4f}" for k, v in log.items())
-        console.log(f"Epoch {epoch:03d}  Loss: {loss.item():.4f}  {log_items_str}") # Added loss.item() for clarity
+        console.log(f"Epoch {epoch:03d}  Loss: {loss.item():.4f}  {log_items_str}")
 
-        if epoch % 5 == 0 or epoch == args.epochs: # Using args.eval_every if available, else default
+        if epoch % 5 == 0 or epoch == args.epochs:
             model.eval()
             with torch.no_grad():
-                current_male_values = None # Initialize
+                current_male_values = None
                 current_rmsle_values = None
 
                 if args.eval_mode == "paper":
                     male, rmsle = model.evaluate(
                         snapshots,
                         list(range(len(train_years), len(train_years)+len(test_years)))
-                    ) # use test set for evaluation
-                else:   # counter-factual
+                    )
+                else:  # counter-factual
                     male, rmsle = model.evaluate_team(
                         snapshots,
                         list(range(len(train_years), len(train_years)+len(test_years)))
-                    ) # use test set for evaluation
+                    )
                 
-                current_male_values = male.tolist()
-                current_rmsle_values = rmsle.tolist()
+                current_male_values = male.tolist() if hasattr(male, 'tolist') else male
+                current_rmsle_values = rmsle.tolist() if hasattr(rmsle, 'tolist') else rmsle
+
+                if not isinstance(current_male_values, list): current_male_values = [current_male_values]
+                if not isinstance(current_rmsle_values, list): current_rmsle_values = [current_rmsle_values]
 
                 console.print(f"[green]Eval Epoch {epoch:03d} ({args.eval_mode})[/green] "
-                            f"MALE {current_male_values}  RMSLE {current_rmsle_values}")
+                              f"MALE {current_male_values}  RMSLE {current_rmsle_values}")
 
-                # --- Improvement: Save best model based on the first MALE value ---
-                # Assuming lower MALE is better and we use the first MALE value.
-                # Adjust if your MALE is a single value or you want to track another element/metric.
-                if current_male_values: # Ensure MALE values are available
-                    # Let's assume the first MALE value is the primary one to track
-                    # If male is already a scalar, male.tolist() might not be needed or might error.
-                    # Adjust accordingly. For this example, assuming male is a tensor/list.
-                    metric_to_track = current_male_values[0] if isinstance(current_male_values, list) and current_male_values else float('inf')
+                # (1) Store each evaluated model using the helper function
+                if loss is not None: # Ensure loss is available
+                    save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values, current_rmsle_values, args, loss.item(), run_dir)
 
+                if current_male_values and len(current_male_values) > 0:
+                    # Use the first MALE value for tracking the best model
+                    metric_to_track = float(current_male_values[0]) 
+                    
                     if metric_to_track < best_male_metric:
                         best_male_metric = metric_to_track
-                        best_epoch = epoch
+                        best_epoch_val = epoch
+                        
                         if best_model_path and os.path.exists(best_model_path):
                             try:
                                 os.remove(best_model_path)
+                                console.print(f"[grey50]Removed old best model: {best_model_path}[/grey50]")
                             except OSError as e:
                                 console.print(f"[yellow]Could not remove old best model: {e}[/yellow]")
                                 
@@ -152,35 +248,40 @@ def main():
                             'epoch': epoch,
                             'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict(),
-                            'loss': loss.item(),
+                            'loss': loss.item() if loss is not None else None,
                             'eval_male': current_male_values,
                             'eval_rmsle': current_rmsle_values,
-                            'args': args # Save training arguments
+                            'args': args
                         }, best_model_path)
                         console.print(f"[blue]New best model saved: {best_model_path} "
-                                    f"(MALE: {best_male_metric:.4f})[/blue]")
-                # --- End of improvement ---
+                                      f"(MALE: {best_male_metric:.4f} at epoch {best_epoch_val})[/blue]")
 
-    # Save the final model with a descriptive name and more info
-    final_model_filename = f"final_model_epoch{args.epochs:03d}_{args.eval_mode}.pt"
+    # Save the final model
+    final_model_filename = f"final_model_epoch{args.epochs:03d}_{args.eval_mode}.pt" # Uses target epochs for name
+    actual_last_epoch = epoch if 'epoch' in locals() and start_epoch <= args.epochs else args.epochs
+
     final_model_path = os.path.join(run_dir, final_model_filename)
-    torch.save({
-        'epoch': args.epochs,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'final_train_loss_val': loss.item(), # Last training loss value
-        'final_train_log': log, # Last logged training metrics dict
-        'args': args
-    }, final_model_path)
+    
+    if start_epoch <= args.epochs and loss is not None: # Check if training actually ran and loss is defined
+        torch.save({
+            'epoch': actual_last_epoch, 
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'final_train_loss_val': loss.item(), 
+            'final_train_log': log, 
+            'args': args
+        }, final_model_path)
+        console.print(f"Done. Final model for epoch {actual_last_epoch} saved to {final_model_path}")
+    elif start_epoch <= args.epochs and loss is None: # Training was supposed to run but loss is not defined (should not happen if loop runs)
+        console.print(f"[yellow]Training loop may have had issues; loss not defined. Final model not saved.[/yellow]")
+    else: # Training was skipped
+        console.print(f"No training performed in this run. Final model not saved. (start_epoch: {start_epoch}, args.epochs: {args.epochs})")
 
-    console.print(f"Done. Final model saved to {final_model_path}")
     if best_model_path:
-        console.print(f"Best performing model (Epoch {best_epoch}) retained at: {best_model_path} "
-                    f"with MALE: {best_male_metric:.4f}")
+        console.print(f"Best performing model (Epoch {best_epoch_val}) from this run retained at: {best_model_path} "
+                      f"with MALE: {best_male_metric:.4f}")
     else:
-        console.print("[yellow]No best model was saved based on MALE metric during evaluation steps.[/yellow]")
-
-
+        console.print("[yellow]No best model was saved based on MALE metric during evaluation steps for this run.[/yellow]")
 
 if __name__ == "__main__":
     main()
