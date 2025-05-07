@@ -7,7 +7,7 @@ def ensure_x_field(data):
         data['paper'].x = data['paper'].x_title_emb
     return data
 
-def load_snapshots(path_pattern, years, emb_dim=128, L=5,
+def load_snapshots(path_pattern, years, L=5,
                    generate_if_missing=True, save_generated=True):
     """
     Returns list[HeteroData] for the requested years.
@@ -27,7 +27,7 @@ def load_snapshots(path_pattern, years, emb_dim=128, L=5,
 
         print(f'[data_utils] snapshot {f} not found – generating on the fly …')
         from utils.dataset_builder import build_snapshot
-        snap = build_snapshot(y, L=L)
+        snap = build_snapshot(y, L=L) # five year future citation counts.
         snapshots.append(ensure_x_field(snap))
 
         if save_generated:

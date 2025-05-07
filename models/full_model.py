@@ -60,33 +60,36 @@ class ImpactModel(nn.Module):
             embeddings.append(self.encoder(data))
 
         # -------- temporal smoothing regulariser -------------------- # make sure the same papers, authors, venues are not too different in the two consecutive years
+        train_idxs = set(years_train)
         l_time = []
         node_types_to_regularize = ['paper', 'author', 'venue']  # Add other node types if needed
 
-        for node_type in node_types_to_regularize:
+        for ntype in node_types_to_regularize:
             l_time_ntype = []
-            for t in range(len(snapshots) - 1):
-                emb_t = embeddings[t].get(node_type)
-                emb_t_plus_1 = embeddings[t + 1].get(node_type)
+            for t in years_train:                  # <── changed
+                if (t + 1) not in train_idxs:      # only pairs wholly in train
+                    continue
+                emb_t = embeddings[t]    [ntype]
+                emb_tp1 = embeddings[t+1][ntype]
 
-                if emb_t is not None and emb_t_plus_1 is not None:
-                    common_nodes = torch.arange(
-                        min(emb_t.size(0), emb_t_plus_1.size(0)),
-                        device=device,
-                    )
-                    diff = emb_t[common_nodes] - emb_t_plus_1[common_nodes]
-                    l_time_ntype.append((diff ** 2).sum(dim=1).mean())
+                common = torch.arange(
+                    min(emb_t.size(0), emb_tp1.size(0)),
+                    device=emb_t.device,
+                )
+                diff = emb_t[common] - emb_tp1[common]
+                l_time_ntype.append((diff ** 2).sum(1).mean())
 
             if l_time_ntype:
                 l_time.append(torch.stack(l_time_ntype).mean())
 
-        l_time = torch.stack(l_time).mean() if l_time else torch.tensor(0.0)
+        l_time = (torch.stack(l_time).mean()
+                if l_time else torch.tensor(0.0, device=embeddings[0]['paper'].device))
 
         # -------- prediction loss over all new papers ----------------
         l_pred = []
         for t in years_train: # year t.
             data = snapshots[t]
-            y_true = data['paper'].y_citations.to(device).float()  # [N, L], looks like did not consider the core papers
+            y_true = data['paper'].y_citations.to(device).float()  # [N, L]
             topic_all = embeddings[t]['paper']
             N, _ = y_true.shape
 
@@ -110,12 +113,12 @@ class ImpactModel(nn.Module):
             # 3.2 build sequence  [t-1, …, t-history]
             # ----------------------------------------------------------
             seq_steps = []
-            for k in range(self.history):
+            for k in range(self.history): # k = 0 … 4
                 if k == 0:
-                    # step-0  : topic only  (no neighbours ⇒ no leakage)
+                    # step-0  : the current year, topic only  (no neighbours ⇒ no leakage)
                     seq_k = topic_all                                 # [N,H]
                 else:
-                    yr = t - k                                        # t-1 …
+                    yr = t - k                                        # t-1 … t- 4
                     if yr < 0:                                        # before data starts
                         seq_k = torch.zeros(N, self.hidden_dim, device=device)
                     else:
@@ -126,8 +129,8 @@ class ImpactModel(nn.Module):
                               for pid in range(N) ],
                             dim=0,
                         )                                             # [N,H]
-                seq_steps.append(seq_k)
-
+                seq_steps.append(seq_k) # seq_k is a tensor of shape [N,H], from year t back to year t -4, from now to 4 years ago
+            seq_steps = seq_steps[::-1]
             V_p = torch.stack(seq_steps, dim=1)    # [N,5,H]
 
             # 3.3 generate citation distribution -----------------------
@@ -199,7 +202,7 @@ class ImpactModel(nn.Module):
                             dim=0,
                         )                              # [N,H]
                 seq_steps.append(seq_k)
-
+            seq_steps = seq_steps[::-1]
             V_p = torch.stack(seq_steps, dim=1)        # [N,5,H]
 
             # 4) predict citation distribution
@@ -223,41 +226,42 @@ class ImpactModel(nn.Module):
                      topic_vec: torch.Tensor,
                      snapshots: list,
                      current_year_idx: int):
-        """
-        Counter-factual prediction for a team (author_ids) + topic embedding.
-        Returns Tensor[5] = yearly citation counts for horizons 1…5
-        """
+
         device    = next(self.parameters()).device
         topic_vec = topic_vec.to(device)
 
-        # --- translate raw author IDs to integer indices ---------------
+        # translate raw author IDs to integer indices
         au_idx = torch.tensor(
-            [ self.aut2idx[a] for a in author_ids if a in self.aut2idx ],
+            [self.aut2idx[a] for a in author_ids if a in self.aut2idx],
             device=device, dtype=torch.long
         )
         if au_idx.numel() == 0:
-            raise ValueError("None of the given author IDs is in the graph")
+            raise ValueError("None of the given author IDs appears in the graph")
 
-        # --- build 5-year sequence  (clamp at first snapshot) ----------
         seq = []
-        for k in range(5):                               # k = 0 … 4
-            yr = current_year_idx - k
-            if yr >= 0:
-                emb_dict = self.encoder(snapshots[yr])          # fresh encode
-                auth_emb = emb_dict['author'][au_idx].mean(0)   # [H]
-            else:                                               # before data start
+        # iterate from 4-years-ago … to … current year
+        for offset in range(self.history - 1, -1, -1):
+            yr = current_year_idx - offset       # real calendar year idx
+
+            # ---------- build author embedding (if NOT the current step) --
+            if offset == 0:                      # current year ⇒ NO authors
+                auth_emb = torch.zeros(self.hidden_dim, device=device)
+            elif yr >= 0:
+                emb_dict = self.encoder(snapshots[yr])
+                auth_emb = emb_dict['author'][au_idx].mean(0)
+            else:                                # before data starts
                 auth_emb = torch.zeros(self.hidden_dim, device=device)
 
             v_k = ( self.imputer.w['author'] * auth_emb +
                     self.imputer.w['self']   * topic_vec )
             seq.append(v_k)
 
-        V_p = torch.stack(seq, 0).unsqueeze(0)            # [1,5,H]
+        V_p  = torch.stack(seq, 0).unsqueeze(0)       # [1,5,H]  (oldest→new)
         eta, mu, sigma = self.generator(V_p)
         cum = self.generator.predict_cumulative(
                   self.horizons.to(device), eta, mu, sigma)     # [1,5]
         yearly = torch.cat([cum[:, :1], cum[:,1:] - cum[:,:-1]], 1)
-        return yearly.squeeze(0)                           # [5]
+        return yearly.squeeze(0)                                 # [5]
 
 
     # -----------------------------------------------------------------
@@ -270,7 +274,7 @@ class ImpactModel(nn.Module):
         device    = next(self.parameters()).device
         horizons  = self.horizons.to(device)
 
-        encs = [self.encoder(g) for g in snapshots]       # cache once
+        encs = [self.encoder(g) for g in snapshots]       # testing years
 
         males, rmsles = [], []
         for t in years_test:

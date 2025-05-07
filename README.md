@@ -1,128 +1,193 @@
-# Scientific Team Performance Evaluator
+# Scientific Team-Performance Evaluator
 
-This repository implements a three-stage framework for predicting the future citation trajectory of a scientific paper directly from the temporal bibliographic graph.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
 
-## Framework Components
+A graph-based framework for predicting the five-year citation trajectory of scientific papers or research teams using a temporal, heterogeneous bibliographic network.
 
-1. **Temporally aligned R-GCN**
-   - Shared weights encode every yearly snapshot of the heterogeneous graph (papers – authors – venues – citations).
+![Model Architecture](https://via.placeholder.com/800x400?text=Model+Architecture)
 
-2. **Weighted embedding imputation**
-   - Before the paper exists in the graph, its embedding is imputed from neighbours (authors, venue, referenced papers).
-   - A learnable scalar weight per neighbour type controls the mixture.
+---
 
-3. **Citation time-series generator**
-   - A GRU consumes the 5-year pre-publication embedding sequence and an MLP head outputs the parameters η, μ, σ of a log-normal survival curve C ^ (l)=α⋅(exp(η⋅Φ((lnl−μ)/σ))−1) from which yearly citation counts are obtained.
-   - The training loss is L=L<sub>pred</sub> +β⋅L<sub>time−smooth</sub> where L<sub>time−smooth</sub> penalises sudden changes of node embeddings between consecutive years.
+## 1  Overview
 
+This repository implements a **three-stage framework** that forecasts scientific impact from bibliographic data.
 
-@@ Training options  (train.py)
-   --beta               temporal-smoothness weight
-   --hidden_dim         size of node / RNN embeddings
-   --cold_start_prob    float ∈ [0,1].  With this probability each training
-                       paper is treated as a cold-start example, i.e. its
-                       venue and reference neighbours are removed before the
-                       imputer is called.  Authors + topic remain intact.
-   --device             cuda:N  or  cpu
+Two evaluation settings are supported:
 
+1. **Paper mode** (realistic)  
+   Input = topic embedding + authors + venue + references  
+   Output = yearly citations of the paper (+1 … +5)
 
-## 1. Installation
+2. **Team mode** (counter-factual)  
+   Input = topic embedding + authors (no venue / refs)  
+   Output = yearly citations the team is expected to achieve on that topic
+
+### Features
+
+- **Temporal Graph Modeling**: Process yearly snapshots of bibliographic networks
+- **Pre-Publication Prediction**: Generate citation curves before paper publication
+
+---
+
+## 2  Method
+
+Our approach consists of three stages:
+
+| Stage | Component | Purpose |
+|-------|-----------|---------|
+| ① | Temporally-aligned **R-GCN** | Encodes each yearly snapshot (papers, authors, venues, citations) with weight sharing across years. |
+| ② | **Weighted imputer** | Reconstructs the would-be paper embedding in past years by mixing neighbour embeddings (authors, venue, references) with learnable scalar weights. |
+| ③ | **Citation generator** | A GRU reads the 5-year sequence; three MLP heads output η, μ, σ of a log-normal curve  ![](https://latex.codecogs.com/svg.image?\widehat{C}_p^l=\alpha\bigl(\exp(\eta\Phi((\ln l-\mu)/\sigma))-1\bigr))  from which yearly counts are derived. |
+
+Total loss  
+`L = L_pred + β · L_time-smooth`  
+where `L_time-smooth` discourages sudden embedding changes between
+consecutive years (`β = 0` disables the term).
+
+---
+
+## 3  Installation
 
 ```bash
-# 0) get the code
+# Clone repository
 git clone https://github.com/jiaweixu98/TeamingEvaluator.git
 cd TeamingEvaluator
 
-# 1) create isolated Python ≥3.9 env (here: venv)
-python -m venv .venv
-source .venv/bin/activate
+# Create and activate virtual environment
+python -m venv .venv && source .venv/bin/activate
 python -m pip install --upgrade pip
 
-# 2) install dependencies
-
-pip3 install torch --index-url https://download.pytorch.org/whl/cu118
-
-# remaining python packages
+# PyTorch – change URL for your CUDA/CPU build
+pip install torch --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
 ```
 
-## 2. Data
+---
 
-### 2.1 Raw sources
+## 4  Data
 
-- `data/raw/paper_nodes_GNN_yearly.json.gz` – 2M PubMed papers with neighbours and yearly citation counts
-- `data/raw/tkg_embeddings_all_2024.npz` – 768-d SPECTER2 embeddings for all papers
+Two raw files are needed **once** to build yearly snapshots:
 
-### 2.2 Automatic snapshot generation
+| File | Size | Comment |
+|------|------|---------|
+| `paper_nodes_GNN_yearly.json.gz` | 2 M papers / 44 k authors | metadata & citations |
+| `tkg_embeddings_all_2024.npz` (768-d SPECTER2) *or* `OpenAI_paper_embeddings.npz` (256-d) | – | title/abstract embeddings |
 
-When a file `data/raw/G_<year>.pt` does not exist, the first call to `utils/data_utils.load_snapshots` will:
-- load the compressed JSON & NPZ
-- build a `torch_geometric.data.HeteroData` that contains all papers published ≤ year
-- write the snapshot to `data/raw/G_<year>.pt` for future runs
+About the data:
+- The dataset is large: 2M papers and 44K authors
+- For approximately 9K papers, the authors' publication lists are complete
+- For simplicity, we choose the 9K papers as core papers, using them as the samples for citation labeling
+- When preparing author and venue embeddings, we utilize all 2M papers' embeddings
 
-This happens only once per year; thereafter the pre-generated .pt files are loaded instantly.
+### Auto-building yearly snapshots
 
-## 3. Quick start
+Snapshots `data/raw/G_<year>.pt` (one per year) are produced
+automatically by `utils/data_utils.load_snapshots`.  
+To save time you can download pre-built snapshots from  
+<https://drive.google.com/drive/folders/1g7NEfuLw3pwhOUIdU_jvXnGhgI-AUFXK?usp=drive_link>
+and place them in `data/raw/`.
 
-### 3.1 Smoke-test (1 epoch, tiny split)
+Note: When using pre-built snapshots, you don't need to rebuild the data from scratch.
+
+---
+
+## 5  Training
+
+### Command-line flags (excerpt)
+
+| Flag | Meaning | Default |
+|------|---------|---------|
+| `--train_years y0 y1` | inclusive range used for training | required |
+| `--test_years  y0 y1` | inclusive range used for final test | required |
+| `--hidden_dim`        | size of node / GRU embeddings | `50` |
+| `--epochs`            | training epochs | `150` |
+| `--lr`                | learning rate | `1e-3` |
+| `--beta`              | temporal smoothness weight | `0.5` |
+| `--cold_start_prob`   | hide venue/refs with this prob. during training | `0.3` |
+| `--eval_mode`         | `paper` or `team` | `paper` |
+| `--device`            | CUDA string or `cpu` | auto |
+
+#### Smoke test
 
 ```bash
 python train.py \
   --train_years 1995 1995 \
-  --test_years 1996 1996 \
-  --hidden_dim 32 \
-  --epochs 1 \
-  --cold_start_prob 0.5 \
-  --device cuda:0
+  --test_years  1996 1996 \
+  --epochs 1 --hidden_dim 32 --cold_start_prob 0.5 --device cuda:0
 ```
 
-Output (abbreviated):
-```
-Train years: [1995]
-Test years: [1996]
-Epoch 001 L_pred:2.33 L_time:0.39 Loss:2.52
-Eval MALE tensor([...]) RMSLE tensor([...])
-```
-
-No `dataset_builder loading ...` messages appear if G_1995.pt and G_1996.pt are already cached.
-
-### 3.2 Minimal experiment (2 train + 2 test years)
+#### Typical experiment
 
 ```bash
 python train.py \
   --train_years 2005 2015 \
-  --test_years 2015 2019 \
-  --hidden_dim 64 \
-  --epochs 50 \
-  --cold_start_prob 0.5 \
+  --test_years  2016 2019 \
+  --hidden_dim 64 --epochs 300 --cold_start_prob 0.5 \
+  --beta 0.5 --device cuda:0
+```
+
+Logs and checkpoints appear in `runs/<timestamp>/`.
+
+---
+
+## 6  Inference (team mode example)
+
+```bash
+python inference.py \
+  --ckpt runs/20250217_121314/best_model_epoch050_male0.4321_team.pt \
+  --snapshots "data/raw/G_{}.pt" \
+  --year 2020 \
+  --authors 123456 789012 \
+  --topic_emb path/to/topic_vec.npy \
   --device cuda:0
 ```
-parser.add_argument("--train_years", nargs=2, type=int, required=True,
-                        help="e.g. 1995 2004 inclusive")
-    parser.add_argument("--test_years", nargs=2, type=int, required=True)
-    parser.add_argument("--hidden_dim", type=int, default=50)
-    parser.add_argument("--epochs", type=int, default=30)
-    parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--beta", type=float, default=.5) # regularization parameter (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
-    parser.add_argument("--device", default="cuda:7" if torch.cuda.is_available() else "cpu")
-    parser.add_argument("--cold_start_prob", type=float, default=0.3,
-                    help="probability that a training paper is treated as "
-                         "venue/reference-free (cold-start calibration)")
-    parser.add_argument("--eval_mode", choices=["paper", "team"], default="paper",
-                    help="'paper' = original evaluation  |  'team' = counter-factual")
 
-## 4. Directory structure
+Output: predicted yearly citations for +1 … +5.
+
+---
+
+## 7  Baselines (ongoing)
+
+Two reference methods (code in `baselines/`) are provided:
+
+1. **GBM** (XGBoost) on hand-crafted features  
+2. **DeepCas** skeleton ready for your random-walk & encoder implementation
+
+Train a baseline via
+
+```bash
+python baseline_train.py \
+  --model gbm \
+  --train_years 2005 2015 \
+  --test_years  2016 2019
+```
+
+---
+
+## 8  Results
+
+| Model | MALE ↓ | RMSLE ↓ | Notes | 
+|-------|-------:|--------:|-------|
+| R-GCN + Imputer + GRU | – | – | *training* |
+| GBM baseline | – | – | |
+| DeepCas baseline | – | – | |
+
+*(Fill in once experiments are finished.)*
+
+---
+
+## 9  Directory Structure
 
 ```
 TeamingEvaluator/
-│
-├── README.md                     ← you are here
+├── README.md
 ├── requirements.txt
 │
 ├── data/
-│   ├── raw/                      ← yearly snapshots G_<year>.pt (auto-generated)
-│   └── yearly_snapshots/         ← intermediate build artefacts
+│   ├── raw/                ← yearly snapshots G_<year>.pt (auto-generated)
+│   └── yearly_snapshots/   ← mapping tables, caches
 │
 ├── models/
 │   ├── rgcn_encoder.py
@@ -131,27 +196,28 @@ TeamingEvaluator/
 │   └── full_model.py
 │
 ├── utils/
-│   ├── dataset_builder.py        ← JSON/NPZ → HeteroData converter
-│   ├── data_utils.py             ← caching & loading helper
-│   └── metrics.py                ← MALE, RMSLE
+│   ├── dataset_builder.py
+│   ├── data_utils.py
+│   └── metrics.py
 │
-└── train.py                      ← training / evaluation entry point
+├── train.py
+└── inference.py
 ```
 
-Todos:
-author embedding: weighted aggreagated. (now random)
-venue embedding: do an average. (now random)
+---
 
-there are so many papers, lead to a very large graph.
+## 10  Tips & Pitfalls
 
-read all the snapshots into a list at a same time, can improve it.
+*Large graph, small label set*  (~9 k labelled papers vs. millions of
+nodes) may cause over-fitting. Recommended knobs:
 
-currently only 9k cits are used in training, the sample size is too small, the model itself is very complex (millions of nodes).
+1. keep `hidden_dim ≤ 64`;  
+2. `--cold_start_prob ≥ 0.3`;  
+3. use an internal validation split for early stopping;  
+4. tune `--beta` and `Adam(weight_decay=1e-4)`.
 
-Current impute, is simple averaging, we can consider add some weights to understand different importance of the specific neibghbors.
+---
 
-Replacing random author/venue vectors with weighted averages of paper embeddings is safe and likely beneficial.
+## License
 
-Combine dimensionality reduction, half precision, shared storage and sampled mini-batches to curb memory usage.
-
-Balance the small counter-factual set with dual-task learning, synthetic masking and stricter regularisation so the complex model does not overfit to only 9 k examples.
+This project is licensed under the MIT License – see [LICENSE](LICENSE) for details.

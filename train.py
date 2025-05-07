@@ -19,10 +19,10 @@ console = Console()
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_years", nargs=2, type=int, required=True,
-                        help="e.g. 1995 2004 inclusive")
+                        help="e.g. 1995 2004 inclusive, the yeas to train on")
     parser.add_argument("--test_years", nargs=2, type=int, required=True)
     parser.add_argument("--hidden_dim", type=int, default=50)
-    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--epochs", type=int, default=150)
     parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--beta", type=float, default=.5) # regularization parameter (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
@@ -77,35 +77,109 @@ def main():
     run_dir = os.path.join("runs", time.strftime("%Y%m%d_%H%M%S"))
     os.makedirs(run_dir, exist_ok=True)
 
+    # Initialize to track the best model based on MALE (lower is better)
+    best_male_metric = float('inf')
+    best_epoch = 0
+    best_model_path = "" # To store the path of the best model
+
+    console.print(f"Run directory: {run_dir}")
+    # Save args to the run directory for reproducibility
+    if hasattr(args, '__dict__'):
+        with open(os.path.join(run_dir, "args.txt"), 'w') as f:
+            for arg in vars(args):
+                f.write(f"{arg}: {getattr(args, arg)}\n")
+    else:
+        console.print("[yellow]Warning: 'args' object does not have __dict__, cannot save arguments easily.[/yellow]")
+
+
     # Training loop ---------------------------------------------------
     for epoch in range(1, args.epochs + 1):
         model.train()
         optimizer.zero_grad()
-        loss, log = model(snapshots, list(range(len(train_years))))
+        loss, log = model(snapshots, list(range(len(train_years)))) # training on the first len(train_years) snapshots
         loss.backward() # compute gradients
         optimizer.step()
 
-        console.log(f"Epoch {epoch:03d}  " +
-                    "  ".join(f"{k}:{v:.4f}" for k, v in log.items()))
+        # Constructing the log message
+        log_items_str = "  ".join(f"{k}:{v:.4f}" for k, v in log.items())
+        console.log(f"Epoch {epoch:03d}  Loss: {loss.item():.4f}  {log_items_str}") # Added loss.item() for clarity
 
-        if epoch % 5 == 0 or epoch == args.epochs:
+        if epoch % 5 == 0 or epoch == args.epochs: # Using args.eval_every if available, else default
             model.eval()
             with torch.no_grad():
+                current_male_values = None # Initialize
+                current_rmsle_values = None
+
                 if args.eval_mode == "paper":
                     male, rmsle = model.evaluate(
                         snapshots,
                         list(range(len(train_years), len(train_years)+len(test_years)))
-                    )
+                    ) # use test set for evaluation
                 else:   # counter-factual
                     male, rmsle = model.evaluate_team(
                         snapshots,
                         list(range(len(train_years), len(train_years)+len(test_years)))
-                    )
-            console.print(f"[green]Eval-{args.eval_mode}[/green] "
-                        f"MALE {male.tolist()}  RMSLE {rmsle.tolist()}")
+                    ) # use test set for evaluation
+                
+                current_male_values = male.tolist()
+                current_rmsle_values = rmsle.tolist()
 
-    torch.save(model.state_dict(), os.path.join(run_dir, "model.pt"))
-    console.print(f"Done. Model saved to {run_dir}/model.pt")
+                console.print(f"[green]Eval Epoch {epoch:03d} ({args.eval_mode})[/green] "
+                            f"MALE {current_male_values}  RMSLE {current_rmsle_values}")
+
+                # --- Improvement: Save best model based on the first MALE value ---
+                # Assuming lower MALE is better and we use the first MALE value.
+                # Adjust if your MALE is a single value or you want to track another element/metric.
+                if current_male_values: # Ensure MALE values are available
+                    # Let's assume the first MALE value is the primary one to track
+                    # If male is already a scalar, male.tolist() might not be needed or might error.
+                    # Adjust accordingly. For this example, assuming male is a tensor/list.
+                    metric_to_track = current_male_values[0] if isinstance(current_male_values, list) and current_male_values else float('inf')
+
+                    if metric_to_track < best_male_metric:
+                        best_male_metric = metric_to_track
+                        best_epoch = epoch
+                        if best_model_path and os.path.exists(best_model_path):
+                            try:
+                                os.remove(best_model_path)
+                            except OSError as e:
+                                console.print(f"[yellow]Could not remove old best model: {e}[/yellow]")
+                                
+                        best_model_filename = f"best_model_epoch{epoch:03d}_male{best_male_metric:.4f}_{args.eval_mode}.pt"
+                        best_model_path = os.path.join(run_dir, best_model_filename)
+                        
+                        torch.save({
+                            'epoch': epoch,
+                            'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'loss': loss.item(),
+                            'eval_male': current_male_values,
+                            'eval_rmsle': current_rmsle_values,
+                            'args': args # Save training arguments
+                        }, best_model_path)
+                        console.print(f"[blue]New best model saved: {best_model_path} "
+                                    f"(MALE: {best_male_metric:.4f})[/blue]")
+                # --- End of improvement ---
+
+    # Save the final model with a descriptive name and more info
+    final_model_filename = f"final_model_epoch{args.epochs:03d}_{args.eval_mode}.pt"
+    final_model_path = os.path.join(run_dir, final_model_filename)
+    torch.save({
+        'epoch': args.epochs,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'final_train_loss_val': loss.item(), # Last training loss value
+        'final_train_log': log, # Last logged training metrics dict
+        'args': args
+    }, final_model_path)
+
+    console.print(f"Done. Final model saved to {final_model_path}")
+    if best_model_path:
+        console.print(f"Best performing model (Epoch {best_epoch}) retained at: {best_model_path} "
+                    f"with MALE: {best_male_metric:.4f}")
+    else:
+        console.print("[yellow]No best model was saved based on MALE metric during evaluation steps.[/yellow]")
+
 
 
 if __name__ == "__main__":

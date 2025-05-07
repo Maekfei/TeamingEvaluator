@@ -29,7 +29,7 @@ with gzip.open(PAPER_JSON, 'rt', encoding='utf-8') as f:
     paper_json = json.load(f)
 
 # ------------- load the big embedding file --------------------------------
-print('[dataset_builder] loading SPECTER 2 embeddings …')
+print('[dataset_builder] loading OpenAI embeddings …')
 with np.load(EMB_NPZ, mmap_mode='r') as npz:
     emb_matrix = npz['embeddings']       # mem-mapped (N, 768) float32
     emb_ids    = npz['ids'].astype(str)  # 1-to-1 list of PubMed IDs
@@ -82,14 +82,12 @@ PAPER2IDX, AUT2IDX, VEN2IDX = load_or_init_mappings()
 
 # ------------- create one snapshot ---------------------------------------
 def build_snapshot(up_to_year: int,
-                   L: int = 5,
-                   core_only_labels: bool = True) -> HeteroData:
+                   L: int = 5,) -> HeteroData:
     """
     Parameters
     ----------
     up_to_year : include papers published ≤ this year
     L          : prediction horizon (# yearly citation counts)
-    core_only_labels : if True, loss is computed only for core papers
     """
     print(f'[dataset_builder]   ⇒ building snapshot ≤ {up_to_year}')
 
@@ -118,7 +116,7 @@ def build_snapshot(up_to_year: int,
         paper_idx_of[pid] = p_idx # local index
 
 
-        # SPECTER 2 embedding  (falls back to zeros if missing); here it will be 768 dim
+        # OpenAI embedding  (falls back to zeros if missing); here it will be 256 dim
         row = id2embrow.get(pid, None)
         if row is not None:
             x_paper[p_idx] = torch.from_numpy(emb_matrix[row])
@@ -190,8 +188,8 @@ def build_snapshot(up_to_year: int,
     # ----------------------------------------------------------------
     # 4) attach to the HeteroData object
     # ----------------------------------------------------------------
-    data['author'].x = x_author
-    data['venue' ].x = x_venue
+    data['author'].x = x_author # 256 dim embedding
+    data['venue' ].x = x_venue # 256 dim embedding
 
     # ---------------- edges ----------------------------------------------
     # 1) author ⟶ paper (“writes”)
