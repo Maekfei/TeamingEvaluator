@@ -122,7 +122,16 @@ python train.py \
 #### Typical experiment
 
 ```bash
-python train.py   --train_years 2005 2015   --test_years  2016 2019   --hidden_dim 64 --epochs 300 --cold_start_prob 0.5   --beta 0.5 --eval_mode team --device cuda:0 --load_checkpoint runs/20250507_155655/best_model_epoch005_male0.3637_team.pt
+python train.py \
+  --train_years 2005 2015 \
+  --test_years 2016 2019 \
+  --hidden_dim 64 \
+  --epochs 300 \
+  --cold_start_prob 0.5 \
+  --beta 0.5 \
+  --eval_mode team \
+  --device cuda:0 \
+  --load_checkpoint runs/20250507_170412_team_resumedFrom_best_model_epoch005_male0.3637_team/evaluated_model_epoch020_male0_0.3730_male1_0.6771_male2_0.7959_male3_0.8540_male4_0.8855_team.pt
 ```
 
 Logs and checkpoints appear in `runs/<timestamp>/`.
