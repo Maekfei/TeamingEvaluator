@@ -69,6 +69,8 @@ pip install -r requirements.txt
 
 ## 4  Data
 
+You can get the data here: <https://drive.google.com/drive/folders/1g7NEfuLw3pwhOUIdU_jvXnGhgI-AUFXK?usp=drive_link>
+
 Two raw files are needed **once** to build yearly snapshots:
 
 | File | Size | Comment |

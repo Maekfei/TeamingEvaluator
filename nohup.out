@@ -28,3 +28,69 @@ runs/20250507_181011_team_resumedFrom_evaluated_model_epoch020_male0_0.3730_male
 Starting training from epoch 21 to 300.
 [18:11:00] Epoch 021  Loss: 1.8982  L_pred:1.7900  L_time:0.2165    train.py:204
            Loss:1.8982                                                          
+[18:11:50] Epoch 022  Loss: 1.8399  L_pred:1.7209  L_time:0.2380    train.py:204
+           Loss:1.8399                                                          
+[18:12:40] Epoch 023  Loss: 1.7696  L_pred:1.6474  L_time:0.2443    train.py:204
+           Loss:1.7696                                                          
+[18:13:29] Epoch 024  Loss: 1.6869  L_pred:1.5664  L_time:0.2410    train.py:204
+           Loss:1.6869                                                          
+[18:14:19] Epoch 025  Loss: 1.5908  L_pred:1.4756  L_time:0.2305    train.py:204
+           Loss:1.5908                                                          
+Eval Epoch 025 (team) MALE [0.37529098987579346, 0.6533734202384949, 
+0.7218300700187683, 0.7531761527061462, 0.7991523742675781]  RMSLE 
+[0.5727912783622742, 0.8794603943824768, 0.9704971313476562, 1.035681962966919, 
+1.1056164503097534]
+Evaluated model checkpoint saved: 
+runs/20250507_181011_team_resumedFrom_evaluated_model_epoch020_male0_0.3730_male
+1_0.6771_male2_0.7959_male3_0.8540_male4_0.8855_team/evaluated_model_epoch025_ma
+le0_0.3753_male1_0.6534_male2_0.7218_male3_0.7532_male4_0.7992_team.pt
+New best model saved: 
+runs/20250507_181011_team_resumedFrom_evaluated_model_epoch020_male0_0.3730_male
+1_0.6771_male2_0.7959_male3_0.8540_male4_0.8855_team/best_model_epoch025_male0.3
+753_team.pt (MALE: 0.3753 at epoch 25)
+[18:20:32] Epoch 026  Loss: 1.4942  L_pred:1.3851  L_time:0.2182    train.py:204
+           Loss:1.4942                                                          
+[18:21:22] Epoch 027  Loss: 1.4001  L_pred:1.2964  L_time:0.2074    train.py:204
+           Loss:1.4001                                                          
+[18:22:13] Epoch 028  Loss: 1.3086  L_pred:1.2078  L_time:0.2016    train.py:204
+           Loss:1.3086                                                          
+[18:23:04] Epoch 029  Loss: 1.2234  L_pred:1.1229  L_time:0.2010    train.py:204
+           Loss:1.2234                                                          
+[18:23:54] Epoch 030  Loss: 1.1495  L_pred:1.0459  L_time:0.2073    train.py:204
+           Loss:1.1495                                                          
+Eval Epoch 030 (team) MALE [0.3857554793357849, 0.6569511890411377, 
+0.6976837515830994, 0.6852481365203857, 0.7290968298912048]  RMSLE 
+[0.5536192655563354, 0.8228609561920166, 0.8738490343093872, 0.9067392349243164,
+1.0074174404144287]
+Evaluated model checkpoint saved: 
+runs/20250507_181011_team_resumedFrom_evaluated_model_epoch020_male0_0.3730_male
+1_0.6771_male2_0.7959_male3_0.8540_male4_0.8855_team/evaluated_model_epoch030_ma
+le0_0.3858_male1_0.6570_male2_0.6977_male3_0.6852_male4_0.7291_team.pt
+[18:30:02] Epoch 031  Loss: 1.0849  L_pred:0.9785  L_time:0.2129    train.py:204
+           Loss:1.0849                                                          
+[18:30:52] Epoch 032  Loss: 1.0286  L_pred:0.9197  L_time:0.2178    train.py:204
+           Loss:1.0286                                                          
+[18:31:43] Epoch 033  Loss: 0.9789  L_pred:0.8703  L_time:0.2172    train.py:204
+           Loss:0.9789                                                          
+[18:32:33] Epoch 034  Loss: 0.9321  L_pred:0.8281  L_time:0.2080    train.py:204
+           Loss:0.9321                                                          
+[18:33:24] Epoch 035  Loss: 0.8911  L_pred:0.7953  L_time:0.1916    train.py:204
+           Loss:0.8911                                                          
+Eval Epoch 035 (team) MALE [0.398546427488327, 0.7242798209190369, 
+0.7904969453811646, 0.7343207597732544, 0.682587742805481]  RMSLE 
+[0.5435140132904053, 0.8679176568984985, 0.9436074495315552, 0.8999577760696411,
+0.8902448415756226]
+Evaluated model checkpoint saved: 
+runs/20250507_181011_team_resumedFrom_evaluated_model_epoch020_male0_0.3730_male
+1_0.6771_male2_0.7959_male3_0.8540_male4_0.8855_team/evaluated_model_epoch035_ma
+le0_0.3985_male1_0.7243_male2_0.7905_male3_0.7343_male4_0.6826_team.pt
+[18:39:35] Epoch 036  Loss: 0.8561  L_pred:0.7712  L_time:0.1698    train.py:204
+           Loss:0.8561                                                          
+[18:40:26] Epoch 037  Loss: 0.8249  L_pred:0.7526  L_time:0.1447    train.py:204
+           Loss:0.8249                                                          
+[18:41:16] Epoch 038  Loss: 0.7982  L_pred:0.7385  L_time:0.1196    train.py:204
+           Loss:0.7982                                                          
+[18:42:07] Epoch 039  Loss: 0.7745  L_pred:0.7262  L_time:0.0966    train.py:204
+           Loss:0.7745                                                          
+[18:42:57] Epoch 040  Loss: 0.7527  L_pred:0.7148  L_time:0.0758    train.py:204
+           Loss:0.7527                                                          
