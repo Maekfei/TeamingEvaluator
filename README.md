@@ -128,12 +128,12 @@ python train.py \
   --train_years 2005 2015 \
   --test_years 2016 2019 \
   --hidden_dim 64 \
-  --epochs 300 \
+  --epochs 800 \
   --cold_start_prob 0.5 \
   --beta 0.5 \
   --eval_mode team \
   --device cuda:0 \
-  --load_checkpoint runs/20250507_170412_team_resumedFrom_best_model_epoch005_male0.3637_team/evaluated_model_epoch020_male0_0.3730_male1_0.6771_male2_0.7959_male3_0.8540_male4_0.8855_team.pt
+  --load_checkpoint runs/20250507_181011_team_resumedFrom_evaluated_model_epoch020_male0_0.3730_male1_0.6771_male2_0.7959_male3_0.8540_male4_0.8855_team/evaluated_model_epoch090_male0_0.4429_male1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team.pt
 ```
 
 Logs and checkpoints appear in `runs/<timestamp>/`.
@@ -176,13 +176,18 @@ python baseline_train.py \
 
 ## 8  Results
 
-| Model | MALE ↓ | RMSLE ↓ | Notes | 
-|-------|-------:|--------:|-------|
-| R-GCN + Imputer + GRU | – | – | *training* |
-| GBM baseline | – | – | |
-| DeepCas baseline | – | – | |
+| Model | MALE-Y1 ↓ | MALE-Y2 ↓ | MALE-Y3 ↓ | MALE-Y4 ↓ | MALE-Y5 ↓ | MALE-Avg ↓ | RMSLE-Y1 ↓ | RMSLE-Y2 ↓ | RMSLE-Y3 ↓ | RMSLE-Y4 ↓ | RMSLE-Y5 ↓ | RMSLE-Avg ↓ |
+|-------|:--------:|:--------:|:--------:|:--------:|:--------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:----------:|
+| GBM baseline | 0.198 | 0.282 | 0.321 | 0.326 | 0.338 | 0.293 | 0.325 | 0.452 | 0.503 | 0.521 | 0.539 | 0.468 |
+| (training) R-GCN + Imputer + GRU | 0.438 | 0.513 | 0.529 | 0.543 | 0.543 | 0.513 | 0.527 | 0.625 | 0.653 | 0.678 | 0.687 | 0.634 |
 
-*(Fill in once experiments are finished.)*
+**Notes:**
+- Lower values are better for all metrics (↓)
+- MALE = Mean Absolute Logarithmic Error
+- RMSLE = Root Mean Square Logarithmic Error
+- Y1-Y5 = prediction years 1 through 5
+- R-GCN results from epoch 150 (team mode)
+
 
 ---
 
@@ -211,21 +216,3 @@ TeamingEvaluator/
 ├── train.py
 └── inference.py
 ```
-
----
-
-## 10  Tips & Pitfalls
-
-*Large graph, small label set*  (~9 k labelled papers vs. millions of
-nodes) may cause over-fitting. Recommended knobs:
-
-1. keep `hidden_dim ≤ 64`;  
-2. `--cold_start_prob ≥ 0.3`;  
-3. use an internal validation split for early stopping;  
-4. tune `--beta` and `Adam(weight_decay=1e-4)`.
-
----
-
-## License
-
-This project is licensed under the MIT License – see [LICENSE](LICENSE) for details.

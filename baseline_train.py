@@ -1,81 +1,154 @@
 #!/usr/bin/env python3
 """
-Unified CLI for classical & DeepCas baselines.
+Train / evaluate the simple GBM baseline (XGBoost).
 
-Examples
---------
-# GBM on years 2005-2013
-python baseline_train.py \
-    --model gbm \
-    --train_years 2005 2013 \
-    --test_years 2016 2019
-
-# DeepCas (needs your implementation) on GPU 0
-python baseline_train.py \
-    --model deepcas \
-    --train_years 2005 2013 \
-    --test_years 2016 2019 \
-    --device cuda:0
+Example
+-------
+python baseline_train.py --train_years 2006 2015 --test_years 2016 2019
 """
-import argparse, os, time, torch, pickle
-from utils.data_utils import load_snapshots
-from baselines.gbm_model import GBMBaseline
-from baselines.deepcas_model import DeepCasModel
+import argparse, os, time, pickle
+import numpy as np
+import torch
 from rich.console import Console
+from utils.data_utils import load_snapshots
+from utils.metrics import male_vec, rmsle_vec
+
+from baselines.gbm_model import GBMBaseline
 
 console = Console()
 
+
+# ---------------------------------------------------------------------------
+def build_dataset(snapshots, year_indices):
+    """
+    Generates one (X, y) pair for *every* paper that appears in the years
+    designated by `year_indices`.
+
+    X  : [N, 513]      256 topic emb + 256 mean-author emb + 1 (#authors)
+    y  : [N, 5]        5 yearly citation counts
+    """
+    feats, labels = [], []
+
+    for t in year_indices:
+        g_now  = snapshots[t]
+        g_prev = snapshots[t - 1] if t - 1 >= 0 else None
+
+        topic_now   = g_now["paper"].x_title_emb.cpu()        # [P, 256]
+        y_citations = g_now["paper"].y_citations.cpu().float()# [P, 5]
+
+        # author→paper incidence for year t
+        src, dst = g_now["author", "writes", "paper"].edge_index.cpu()
+
+        # build a list of author indices for every paper
+        paper2authors = [[] for _ in range(topic_now.size(0))]
+        for a, p in zip(src.tolist(), dst.tolist()):
+            paper2authors[p].append(a)
+
+        # author embeddings from *previous* year
+        if g_prev is not None and "author" in g_prev.node_types:
+            auth_emb_prev = g_prev["author"].x.cpu()          # [Aprev, 256]
+        else:
+            auth_emb_prev = None                              # will fallback to zeros
+
+        for pid in range(topic_now.size(0)):
+            topic_vec = topic_now[pid]
+
+            auth_ids = paper2authors[pid]
+            if auth_ids and auth_emb_prev is not None:
+                valid_ids = [aid for aid in auth_ids
+                             if aid < auth_emb_prev.size(0)]
+                if valid_ids:
+                    mean_auth = auth_emb_prev[valid_ids].mean(0)
+                else:
+                    mean_auth = torch.zeros(256)
+            else:
+                mean_auth = torch.zeros(256)
+
+            num_auth = torch.tensor([len(auth_ids)], dtype=torch.float32)
+
+            x = torch.cat([topic_vec, mean_auth, num_auth])   # 513-dim
+            feats.append(x.numpy())
+            labels.append(y_citations[pid].numpy())
+
+    X = np.asarray(feats,  dtype=np.float32)
+    y = np.asarray(labels, dtype=np.float32)
+    return X, y
+# ---------------------------------------------------------------------------
+
+
+def evaluate(model, X, y_true):
+    y_pred = model.predict(X)
+    y_pred = np.clip(y_pred, 0.0, None)      # ← keep ≥0
+
+    y_true_t = torch.from_numpy(y_true)
+    y_pred_t = torch.from_numpy(y_pred)
+
+    male  = male_vec (y_true_t, y_pred_t)
+    rmsle = rmsle_vec(y_true_t, y_pred_t)
+    return male, rmsle
+
+
+# ---------------------------------------------------------------------------
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--model", choices=["gbm", "deepcas"], required=True)
-    p.add_argument("--train_years", nargs=2, type=int, required=True)
-    p.add_argument("--test_years",  nargs=2, type=int, required=True)
-    p.add_argument("--device", default="cpu")
-    args = p.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--train_years", nargs=2, type=int, required=True)
+    parser.add_argument("--test_years",  nargs=2, type=int, required=True)
+    parser.add_argument("--n_estimators", type=int, default=500)
+    parser.add_argument("--max_depth",    type=int, default=6)
+    parser.add_argument("--learning_rate",type=float, default=0.05)
+    parser.add_argument("--device",       default="cpu")      # GBM is CPU anyway
+    args = parser.parse_args()
 
-    train_years = list(range(args.train_years[0], args.train_years[1] + 1))
-    test_years  = list(range(args.test_years [0], args.test_years [1] + 1))
-    console.print(f"[bold]Train years:[/bold] {train_years}")
-    console.print(f"[bold]Test years:[/bold]  {test_years}")
+    # ----------------------------------------------------------------------
+    # 1) load all snapshots we might need
+    #    we also read *one year before* the first training year to obtain
+    #    author embeddings for that very first year.
+    # ----------------------------------------------------------------------
+    first_needed = args.train_years[0] - 1
+    years_all = list(range(first_needed,
+                           args.test_years[1] + 1))
+    console.print(f"Loading {len(years_all)} yearly graphs …")
+    snapshots = load_snapshots("data/raw/G_{}.pt", years_all)
 
-    # ------------------------------------------------------------------
-    snapshots = load_snapshots("data/raw/G_{}.pt", train_years + test_years)
-    snapshots = [g.to(args.device) for g in snapshots]
+    # 2) index helpers -----------------------------------------------------
+    year2idx = {y: i for i, y in enumerate(years_all)}
 
-    # ------------------------------------------------------------------
-    run_dir = os.path.join("runs_baseline", time.strftime("%Y%m%d_%H%M%S"))
+    train_indices = [year2idx[y] for y in
+                     range(args.train_years[0], args.train_years[1] + 1)]
+    test_indices  = [year2idx[y] for y in
+                     range(args.test_years[0] , args.test_years[1]  + 1)]
+
+    # 3) dataset -----------------------------------------------------------
+    console.print("Building training set …")
+    X_train, y_train = build_dataset(snapshots, train_indices)
+    console.print("Building   test   set …")
+    X_test , y_test  = build_dataset(snapshots, test_indices)
+
+    console.print(f"Train samples: {X_train.shape[0]:,}")
+    console.print(f"Test  samples: {X_test.shape [0]:,}")
+
+    # 4) model -------------------------------------------------------------
+    model = GBMBaseline(
+        n_estimators = args.n_estimators,
+        max_depth    = args.max_depth,
+        learning_rate= args.learning_rate,
+    )
+    console.print("[cyan]Training GBM …[/cyan]")
+    model.fit(X_train, y_train)
+
+    # 5) evaluation --------------------------------------------------------
+    male, rmsle = evaluate(model, X_test, y_test)
+    console.print(f"[green]MALE : {male.tolist()}[/green]")
+    console.print(f"[green]RMSLE: {rmsle.tolist()}[/green]")
+
+    # 6) persist -----------------------------------------------------------
+    run_dir = os.path.join("runs_gbm",
+                           time.strftime("%Y%m%d_%H%M%S"))
     os.makedirs(run_dir, exist_ok=True)
+    with open(os.path.join(run_dir, "gbm_model.pkl"), "wb") as fh:
+        pickle.dump(model, fh)
+    console.print(f"Model saved to {run_dir}/gbm_model.pkl")
 
-    # ------------------------------------------------------------------
-    if args.model == "gbm":
-        model = GBMBaseline(device=args.device)
-        console.print("Fitting GBM …")
-        model.fit(snapshots, list(range(len(train_years))))
-        male, rmsle = model.evaluate(
-            snapshots,
-            list(range(len(train_years), len(train_years) + len(test_years)))
-        )
-
-    elif args.model == "deepcas":
-        device = torch.device(args.device)
-        model = DeepCasModel(hidden_dim=64).to(device)
-
-        # TODO: build DataLoader for random-walk batches
-        train_loader, test_loader = None, None
-        raise NotImplementedError("DeepCas data loader not yet implemented")
-
-        optim = torch.optim.Adam(model.parameters(), lr=1e-3)
-        for epoch in range(1, 51):
-            loss = model.train_one_epoch(train_loader, optim, device)
-            console.log(f"Epoch {epoch:03d}  loss {loss:.4f}")
-        male, rmsle = model.evaluate(test_loader, device)
-
-    console.print(f"[green]Finished.[/green]  MALE {male.tolist()}  "
-                  f"RMSLE {rmsle.tolist()}")
-
-    # save metrics
-    with open(os.path.join(run_dir, f"{args.model}_metrics.pkl"), "wb") as fh:
-        pickle.dump({"male": male, "rmsle": rmsle}, fh)
 
 if __name__ == "__main__":
     main()

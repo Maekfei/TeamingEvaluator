@@ -4,3 +4,4 @@ numpy
 pandas
 scikit-learn
 torch_geometric
+xgboost

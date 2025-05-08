@@ -200,10 +200,9 @@ def main():
             optimizer.step()
 
             log_items_str = "  ".join(f"{k}:{v:.4f}" for k, v in log.items())
-            # --- MODIFICATION: Use the console object for logging ---
             console.log(f"Epoch {epoch:03d}  Loss: {loss.item():.4f}  {log_items_str}")
 
-            if epoch % 5 == 0 or epoch == args.epochs:
+            if epoch % 25 == 0 or epoch == args.epochs:
                 model.eval()
                 with torch.no_grad():
                     current_male_values = None
