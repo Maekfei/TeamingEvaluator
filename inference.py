@@ -2,11 +2,12 @@
 """
 Example
 -------
+
 python inference.py \
-   --ckpt runs/20250507_170412_team_resumedFrom_best_model_epoch005_male0.3637_team/evaluated_model_epoch020_male0_0.3730_male1_0.6771_male2_0.7959_male3_0.8540_male4_0.8855_team.pt \
+    --ckpt runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch675_male0_0.4272_male1_0.3937_male2_0.3771_male3_0.3847_male4_0.3955_team.pt \
    --snapshots "data/raw/G_{}.pt" \
    --year 2024 \
-   --authors 6052561 6052561 \
+   --authors 6052561 100000093 \
    --topic_emb path/to/topic_vec.npy \
    --device cuda:1
 """
@@ -105,9 +106,9 @@ def main():
     # ------------------------------------------------------------------ #
     # 5) prepare the query paper’s topic vector
     # ------------------------------------------------------------------ #
-    topic_np = np.load(args.topic_emb)          # [256] or [1,256]
+    # topic_np = np.load(args.topic_emb)          # [256] or [1,256]
     # do a dummy random topic embedding here for testing
-    # topic_np = np.random.rand(1, 256)           # [1, 256]
+    topic_np = np.random.rand(1, 256)           # [1, 256]
     topic_np = topic_np.squeeze().astype(np.float32)
     if topic_np.ndim != 1 or topic_np.size != in_dims['paper']:
         raise ValueError(f"Expected a flat vector with {in_dims['paper']} "
