@@ -633,3 +633,1259 @@ runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
            Loss:0.2660                                                          
 [22:35:06] Epoch 170  Loss: 0.2638  L_pred:0.2565  L_time:0.0147    train.py:203
            Loss:0.2638                                                          
+[22:35:56] Epoch 171  Loss: 0.2590  L_pred:0.2511  L_time:0.0159    train.py:203
+           Loss:0.2590                                                          
+[22:36:46] Epoch 172  Loss: 0.2583  L_pred:0.2505  L_time:0.0156    train.py:203
+           Loss:0.2583                                                          
+[22:37:37] Epoch 173  Loss: 0.2585  L_pred:0.2512  L_time:0.0146    train.py:203
+           Loss:0.2585                                                          
+[22:38:27] Epoch 174  Loss: 0.2564  L_pred:0.2483  L_time:0.0160    train.py:203
+           Loss:0.2564                                                          
+[22:39:17] Epoch 175  Loss: 0.2520  L_pred:0.2446  L_time:0.0148    train.py:203
+           Loss:0.2520                                                          
+Eval Epoch 175 (team) MALE [0.42542925477027893, 0.485446035861969, 
+0.497780978679657, 0.5114693641662598, 0.5154597163200378]  RMSLE 
+[0.5095627307891846, 0.5938394069671631, 0.6191278696060181, 0.6427066326141357,
+0.6551997661590576]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch175_ma
+le0_0.4254_male1_0.4854_male2_0.4978_male3_0.5115_male4_0.5155_team.pt
+Removed old best model: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/best_model_epoch150_male0.4
+384_team.pt
+New best model saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/best_model_epoch175_male0.4
+254_team.pt (MALE: 0.4254 at epoch 175)
+[22:45:24] Epoch 176  Loss: 0.2499  L_pred:0.2424  L_time:0.0150    train.py:203
+           Loss:0.2499                                                          
+[22:46:14] Epoch 177  Loss: 0.2507  L_pred:0.2428  L_time:0.0157    train.py:203
+           Loss:0.2507                                                          
+[22:47:04] Epoch 178  Loss: 0.2533  L_pred:0.2463  L_time:0.0140    train.py:203
+           Loss:0.2533                                                          
+[22:47:54] Epoch 179  Loss: 0.2477  L_pred:0.2399  L_time:0.0155    train.py:203
+           Loss:0.2477                                                          
+[22:48:44] Epoch 180  Loss: 0.2443  L_pred:0.2370  L_time:0.0147    train.py:203
+           Loss:0.2443                                                          
+[22:49:34] Epoch 181  Loss: 0.2442  L_pred:0.2370  L_time:0.0143    train.py:203
+           Loss:0.2442                                                          
+[22:50:24] Epoch 182  Loss: 0.2433  L_pred:0.2356  L_time:0.0153    train.py:203
+           Loss:0.2433                                                          
+[22:51:14] Epoch 183  Loss: 0.2413  L_pred:0.2344  L_time:0.0138    train.py:203
+           Loss:0.2413                                                          
+[22:52:04] Epoch 184  Loss: 0.2380  L_pred:0.2305  L_time:0.0148    train.py:203
+           Loss:0.2380                                                          
+[22:52:54] Epoch 185  Loss: 0.2364  L_pred:0.2292  L_time:0.0144    train.py:203
+           Loss:0.2364                                                          
+[22:53:44] Epoch 186  Loss: 0.2363  L_pred:0.2293  L_time:0.0140    train.py:203
+           Loss:0.2363                                                          
+[22:54:34] Epoch 187  Loss: 0.2357  L_pred:0.2284  L_time:0.0147    train.py:203
+           Loss:0.2357                                                          
+[22:55:24] Epoch 188  Loss: 0.2345  L_pred:0.2276  L_time:0.0139    train.py:203
+           Loss:0.2345                                                          
+[22:56:14] Epoch 189  Loss: 0.2323  L_pred:0.2251  L_time:0.0143    train.py:203
+           Loss:0.2323                                                          
+[22:57:04] Epoch 190  Loss: 0.2300  L_pred:0.2230  L_time:0.0139    train.py:203
+           Loss:0.2300                                                          
+[22:57:54] Epoch 191  Loss: 0.2281  L_pred:0.2212  L_time:0.0138    train.py:203
+           Loss:0.2281                                                          
+[22:58:44] Epoch 192  Loss: 0.2272  L_pred:0.2201  L_time:0.0141    train.py:203
+           Loss:0.2272                                                          
+[22:59:34] Epoch 193  Loss: 0.2256  L_pred:0.2188  L_time:0.0137    train.py:203
+           Loss:0.2256                                                          
+[23:00:24] Epoch 194  Loss: 0.2249  L_pred:0.2181  L_time:0.0137    train.py:203
+           Loss:0.2249                                                          
+[23:01:14] Epoch 195  Loss: 0.2226  L_pred:0.2157  L_time:0.0139    train.py:203
+           Loss:0.2226                                                          
+[23:02:04] Epoch 196  Loss: 0.2242  L_pred:0.2176  L_time:0.0133    train.py:203
+           Loss:0.2242                                                          
+[23:02:54] Epoch 197  Loss: 0.2229  L_pred:0.2159  L_time:0.0140    train.py:203
+           Loss:0.2229                                                          
+[23:03:44] Epoch 198  Loss: 0.2277  L_pred:0.2215  L_time:0.0124    train.py:203
+           Loss:0.2277                                                          
+[23:04:34] Epoch 199  Loss: 0.2262  L_pred:0.2190  L_time:0.0143    train.py:203
+           Loss:0.2262                                                          
+[23:05:24] Epoch 200  Loss: 0.2252  L_pred:0.2190  L_time:0.0123    train.py:203
+           Loss:0.2252                                                          
+Eval Epoch 200 (team) MALE [0.44293689727783203, 0.4795442819595337, 
+0.4883153438568115, 0.5090990662574768, 0.5168807506561279]  RMSLE 
+[0.5251266360282898, 0.5859341025352478, 0.6098318099975586, 0.6387395858764648,
+0.6543583273887634]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch200_ma
+le0_0.4429_male1_0.4795_male2_0.4883_male3_0.5091_male4_0.5169_team.pt
+[23:11:28] Epoch 201  Loss: 0.2164  L_pred:0.2097  L_time:0.0133    train.py:203
+           Loss:0.2164                                                          
+[23:12:18] Epoch 202  Loss: 0.2158  L_pred:0.2092  L_time:0.0132    train.py:203
+           Loss:0.2158                                                          
+[23:13:08] Epoch 203  Loss: 0.2180  L_pred:0.2119  L_time:0.0122    train.py:203
+           Loss:0.2180                                                          
+[23:13:58] Epoch 204  Loss: 0.2141  L_pred:0.2074  L_time:0.0133    train.py:203
+           Loss:0.2141                                                          
+[23:14:48] Epoch 205  Loss: 0.2115  L_pred:0.2051  L_time:0.0127    train.py:203
+           Loss:0.2115                                                          
+[23:15:38] Epoch 206  Loss: 0.2127  L_pred:0.2065  L_time:0.0123    train.py:203
+           Loss:0.2127                                                          
+[23:16:28] Epoch 207  Loss: 0.2137  L_pred:0.2071  L_time:0.0132    train.py:203
+           Loss:0.2137                                                          
+[23:17:18] Epoch 208  Loss: 0.2103  L_pred:0.2042  L_time:0.0122    train.py:203
+           Loss:0.2103                                                          
+[23:18:08] Epoch 209  Loss: 0.2077  L_pred:0.2015  L_time:0.0124    train.py:203
+           Loss:0.2077                                                          
+[23:18:59] Epoch 210  Loss: 0.2089  L_pred:0.2024  L_time:0.0129    train.py:203
+           Loss:0.2089                                                          
+[23:19:49] Epoch 211  Loss: 0.2100  L_pred:0.2040  L_time:0.0119    train.py:203
+           Loss:0.2100                                                          
+[23:20:39] Epoch 212  Loss: 0.2068  L_pred:0.2004  L_time:0.0127    train.py:203
+           Loss:0.2068                                                          
+[23:21:29] Epoch 213  Loss: 0.2022  L_pred:0.1962  L_time:0.0121    train.py:203
+           Loss:0.2022                                                          
+[23:22:19] Epoch 214  Loss: 0.2053  L_pred:0.1994  L_time:0.0118    train.py:203
+           Loss:0.2053                                                          
+[23:23:09] Epoch 215  Loss: 0.2047  L_pred:0.1984  L_time:0.0126    train.py:203
+           Loss:0.2047                                                          
+[23:23:59] Epoch 216  Loss: 0.2023  L_pred:0.1964  L_time:0.0117    train.py:203
+           Loss:0.2023                                                          
+[23:24:49] Epoch 217  Loss: 0.1995  L_pred:0.1935  L_time:0.0120    train.py:203
+           Loss:0.1995                                                          
+[23:25:39] Epoch 218  Loss: 0.1991  L_pred:0.1930  L_time:0.0122    train.py:203
+           Loss:0.1991                                                          
+[23:26:29] Epoch 219  Loss: 0.1996  L_pred:0.1939  L_time:0.0115    train.py:203
+           Loss:0.1996                                                          
+[23:27:19] Epoch 220  Loss: 0.1979  L_pred:0.1920  L_time:0.0119    train.py:203
+           Loss:0.1979                                                          
+[23:28:09] Epoch 221  Loss: 0.1961  L_pred:0.1905  L_time:0.0112    train.py:203
+           Loss:0.1961                                                          
+[23:28:59] Epoch 222  Loss: 0.1941  L_pred:0.1885  L_time:0.0113    train.py:203
+           Loss:0.1941                                                          
+[23:29:49] Epoch 223  Loss: 0.1949  L_pred:0.1891  L_time:0.0115    train.py:203
+           Loss:0.1949                                                          
+[23:30:38] Epoch 224  Loss: 0.1939  L_pred:0.1883  L_time:0.0113    train.py:203
+           Loss:0.1939                                                          
+[23:31:29] Epoch 225  Loss: 0.1930  L_pred:0.1873  L_time:0.0113    train.py:203
+           Loss:0.1930                                                          
+Eval Epoch 225 (team) MALE [0.44636133313179016, 0.4661407470703125, 
+0.4691268503665924, 0.48738598823547363, 0.4959415793418884]  RMSLE 
+[0.5249629616737366, 0.5718303918838501, 0.5906650424003601, 0.6165399551391602,
+0.6324520707130432]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch225_ma
+le0_0.4464_male1_0.4661_male2_0.4691_male3_0.4874_male4_0.4959_team.pt
+[23:37:35] Epoch 226  Loss: 0.1918  L_pred:0.1862  L_time:0.0111    train.py:203
+           Loss:0.1918                                                          
+[23:38:25] Epoch 227  Loss: 0.1907  L_pred:0.1852  L_time:0.0111    train.py:203
+           Loss:0.1907                                                          
+[23:39:15] Epoch 228  Loss: 0.1905  L_pred:0.1850  L_time:0.0110    train.py:203
+           Loss:0.1905                                                          
+[23:40:05] Epoch 229  Loss: 0.1893  L_pred:0.1840  L_time:0.0107    train.py:203
+           Loss:0.1893                                                          
+[23:40:55] Epoch 230  Loss: 0.1885  L_pred:0.1831  L_time:0.0109    train.py:203
+           Loss:0.1885                                                          
+[23:41:45] Epoch 231  Loss: 0.1869  L_pred:0.1816  L_time:0.0105    train.py:203
+           Loss:0.1869                                                          
+[23:42:35] Epoch 232  Loss: 0.1872  L_pred:0.1819  L_time:0.0107    train.py:203
+           Loss:0.1872                                                          
+[23:43:25] Epoch 233  Loss: 0.1865  L_pred:0.1813  L_time:0.0103    train.py:203
+           Loss:0.1865                                                          
+[23:44:15] Epoch 234  Loss: 0.1861  L_pred:0.1808  L_time:0.0105    train.py:203
+           Loss:0.1861                                                          
+[23:45:06] Epoch 235  Loss: 0.1862  L_pred:0.1812  L_time:0.0099    train.py:203
+           Loss:0.1862                                                          
+[23:45:56] Epoch 236  Loss: 0.1856  L_pred:0.1804  L_time:0.0104    train.py:203
+           Loss:0.1856                                                          
+[23:46:46] Epoch 237  Loss: 0.1850  L_pred:0.1801  L_time:0.0097    train.py:203
+           Loss:0.1850                                                          
+[23:47:36] Epoch 238  Loss: 0.1841  L_pred:0.1790  L_time:0.0102    train.py:203
+           Loss:0.1841                                                          
+[23:48:26] Epoch 239  Loss: 0.1823  L_pred:0.1774  L_time:0.0097    train.py:203
+           Loss:0.1823                                                          
+[23:49:17] Epoch 240  Loss: 0.1812  L_pred:0.1762  L_time:0.0099    train.py:203
+           Loss:0.1812                                                          
+[23:50:07] Epoch 241  Loss: 0.1795  L_pred:0.1746  L_time:0.0098    train.py:203
+           Loss:0.1795                                                          
+[23:50:57] Epoch 242  Loss: 0.1793  L_pred:0.1744  L_time:0.0098    train.py:203
+           Loss:0.1793                                                          
+[23:51:47] Epoch 243  Loss: 0.1785  L_pred:0.1737  L_time:0.0096    train.py:203
+           Loss:0.1785                                                          
+[23:52:37] Epoch 244  Loss: 0.1778  L_pred:0.1730  L_time:0.0095    train.py:203
+           Loss:0.1778                                                          
+[23:53:28] Epoch 245  Loss: 0.1788  L_pred:0.1740  L_time:0.0096    train.py:203
+           Loss:0.1788                                                          
+[23:54:18] Epoch 246  Loss: 0.1770  L_pred:0.1723  L_time:0.0094    train.py:203
+           Loss:0.1770                                                          
+[23:55:08] Epoch 247  Loss: 0.1755  L_pred:0.1707  L_time:0.0095    train.py:203
+           Loss:0.1755                                                          
+[23:55:59] Epoch 248  Loss: 0.1758  L_pred:0.1712  L_time:0.0093    train.py:203
+           Loss:0.1758                                                          
+[23:56:49] Epoch 249  Loss: 0.1749  L_pred:0.1702  L_time:0.0095    train.py:203
+           Loss:0.1749                                                          
+[23:57:39] Epoch 250  Loss: 0.1742  L_pred:0.1697  L_time:0.0090    train.py:203
+           Loss:0.1742                                                          
+Eval Epoch 250 (team) MALE [0.458255797624588, 0.46814948320388794, 
+0.4726661443710327, 0.4960837960243225, 0.505686342716217]  RMSLE 
+[0.5355937480926514, 0.5753529071807861, 0.5973243713378906, 0.6264045238494873,
+0.6416424512863159]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch250_ma
+le0_0.4583_male1_0.4681_male2_0.4727_male3_0.4961_male4_0.5057_team.pt
+[00:03:45] Epoch 251  Loss: 0.1754  L_pred:0.1707  L_time:0.0095    train.py:203
+           Loss:0.1754                                                          
+[00:04:35] Epoch 252  Loss: 0.1787  L_pred:0.1744  L_time:0.0086    train.py:203
+           Loss:0.1787                                                          
+[00:05:25] Epoch 253  Loss: 0.1862  L_pred:0.1813  L_time:0.0098    train.py:203
+           Loss:0.1862                                                          
+[00:06:17] Epoch 254  Loss: 0.2018  L_pred:0.1979  L_time:0.0079    train.py:203
+           Loss:0.2018                                                          
+[00:07:08] Epoch 255  Loss: 0.1810  L_pred:0.1763  L_time:0.0095    train.py:203
+           Loss:0.1810                                                          
+[00:07:59] Epoch 256  Loss: 0.1712  L_pred:0.1667  L_time:0.0089    train.py:203
+           Loss:0.1712                                                          
+[00:08:49] Epoch 257  Loss: 0.1807  L_pred:0.1766  L_time:0.0082    train.py:203
+           Loss:0.1807                                                          
+[00:09:40] Epoch 258  Loss: 0.1759  L_pred:0.1713  L_time:0.0092    train.py:203
+           Loss:0.1759                                                          
+[00:10:31] Epoch 259  Loss: 0.1691  L_pred:0.1646  L_time:0.0088    train.py:203
+           Loss:0.1691                                                          
+[00:11:21] Epoch 260  Loss: 0.1739  L_pred:0.1697  L_time:0.0083    train.py:203
+           Loss:0.1739                                                          
+[00:12:11] Epoch 261  Loss: 0.1723  L_pred:0.1677  L_time:0.0093    train.py:203
+           Loss:0.1723                                                          
+[00:13:04] Epoch 262  Loss: 0.1682  L_pred:0.1638  L_time:0.0089    train.py:203
+           Loss:0.1682                                                          
+[00:13:56] Epoch 263  Loss: 0.1712  L_pred:0.1671  L_time:0.0083    train.py:203
+           Loss:0.1712                                                          
+[00:14:50] Epoch 264  Loss: 0.1702  L_pred:0.1658  L_time:0.0089    train.py:203
+           Loss:0.1702                                                          
+[00:15:43] Epoch 265  Loss: 0.1669  L_pred:0.1625  L_time:0.0087    train.py:203
+           Loss:0.1669                                                          
+[00:16:36] Epoch 266  Loss: 0.1682  L_pred:0.1640  L_time:0.0085    train.py:203
+           Loss:0.1682                                                          
+[00:17:30] Epoch 267  Loss: 0.1680  L_pred:0.1635  L_time:0.0090    train.py:203
+           Loss:0.1680                                                          
+[00:18:23] Epoch 268  Loss: 0.1659  L_pred:0.1617  L_time:0.0084    train.py:203
+           Loss:0.1659                                                          
+[00:19:17] Epoch 269  Loss: 0.1649  L_pred:0.1608  L_time:0.0083    train.py:203
+           Loss:0.1649                                                          
+[00:20:12] Epoch 270  Loss: 0.1647  L_pred:0.1604  L_time:0.0086    train.py:203
+           Loss:0.1647                                                          
+[00:21:05] Epoch 271  Loss: 0.1635  L_pred:0.1594  L_time:0.0082    train.py:203
+           Loss:0.1635                                                          
+[00:21:59] Epoch 272  Loss: 0.1635  L_pred:0.1594  L_time:0.0082    train.py:203
+           Loss:0.1635                                                          
+[00:22:53] Epoch 273  Loss: 0.1634  L_pred:0.1592  L_time:0.0084    train.py:203
+           Loss:0.1634                                                          
+[00:23:47] Epoch 274  Loss: 0.1629  L_pred:0.1588  L_time:0.0081    train.py:203
+           Loss:0.1629                                                          
+[00:24:41] Epoch 275  Loss: 0.1620  L_pred:0.1579  L_time:0.0083    train.py:203
+           Loss:0.1620                                                          
+Eval Epoch 275 (team) MALE [0.45013749599456787, 0.45395416021347046, 
+0.455282598733902, 0.4752528667449951, 0.48510926961898804]  RMSLE 
+[0.5257389545440674, 0.559739887714386, 0.5782822966575623, 0.6040522456169128, 
+0.619610607624054]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch275_ma
+le0_0.4501_male1_0.4540_male2_0.4553_male3_0.4753_male4_0.4851_team.pt
+[00:31:11] Epoch 276  Loss: 0.1620  L_pred:0.1578  L_time:0.0083    train.py:203
+           Loss:0.1620                                                          
+[00:32:04] Epoch 277  Loss: 0.1621  L_pred:0.1581  L_time:0.0080    train.py:203
+           Loss:0.1621                                                          
+[00:32:59] Epoch 278  Loss: 0.1612  L_pred:0.1570  L_time:0.0082    train.py:203
+           Loss:0.1612                                                          
+[00:33:53] Epoch 279  Loss: 0.1611  L_pred:0.1570  L_time:0.0082    train.py:203
+           Loss:0.1611                                                          
+[00:34:46] Epoch 280  Loss: 0.1612  L_pred:0.1572  L_time:0.0079    train.py:203
+           Loss:0.1612                                                          
+[00:35:40] Epoch 281  Loss: 0.1598  L_pred:0.1558  L_time:0.0081    train.py:203
+           Loss:0.1598                                                          
+[00:36:34] Epoch 282  Loss: 0.1590  L_pred:0.1551  L_time:0.0079    train.py:203
+           Loss:0.1590                                                          
+[00:37:28] Epoch 283  Loss: 0.1590  L_pred:0.1551  L_time:0.0079    train.py:203
+           Loss:0.1590                                                          
+[00:38:22] Epoch 284  Loss: 0.1579  L_pred:0.1540  L_time:0.0079    train.py:203
+           Loss:0.1579                                                          
+[00:39:16] Epoch 285  Loss: 0.1585  L_pred:0.1546  L_time:0.0078    train.py:203
+           Loss:0.1585                                                          
+[00:40:10] Epoch 286  Loss: 0.1579  L_pred:0.1540  L_time:0.0079    train.py:203
+           Loss:0.1579                                                          
+[00:41:04] Epoch 287  Loss: 0.1568  L_pred:0.1529  L_time:0.0078    train.py:203
+           Loss:0.1568                                                          
+[00:41:57] Epoch 288  Loss: 0.1570  L_pred:0.1532  L_time:0.0076    train.py:203
+           Loss:0.1570                                                          
+[00:42:52] Epoch 289  Loss: 0.1564  L_pred:0.1525  L_time:0.0078    train.py:203
+           Loss:0.1564                                                          
+[00:43:45] Epoch 290  Loss: 0.1554  L_pred:0.1516  L_time:0.0076    train.py:203
+           Loss:0.1554                                                          
+[00:44:40] Epoch 291  Loss: 0.1556  L_pred:0.1518  L_time:0.0075    train.py:203
+           Loss:0.1556                                                          
+[00:45:34] Epoch 292  Loss: 0.1552  L_pred:0.1514  L_time:0.0076    train.py:203
+           Loss:0.1552                                                          
+[00:46:28] Epoch 293  Loss: 0.1548  L_pred:0.1511  L_time:0.0075    train.py:203
+           Loss:0.1548                                                          
+[00:47:22] Epoch 294  Loss: 0.1539  L_pred:0.1502  L_time:0.0075    train.py:203
+           Loss:0.1539                                                          
+[00:48:15] Epoch 295  Loss: 0.1537  L_pred:0.1499  L_time:0.0076    train.py:203
+           Loss:0.1537                                                          
+[00:49:09] Epoch 296  Loss: 0.1535  L_pred:0.1499  L_time:0.0073    train.py:203
+           Loss:0.1535                                                          
+[00:50:03] Epoch 297  Loss: 0.1540  L_pred:0.1502  L_time:0.0075    train.py:203
+           Loss:0.1540                                                          
+[00:50:56] Epoch 298  Loss: 0.1527  L_pred:0.1491  L_time:0.0072    train.py:203
+           Loss:0.1527                                                          
+[00:51:50] Epoch 299  Loss: 0.1531  L_pred:0.1494  L_time:0.0074    train.py:203
+           Loss:0.1531                                                          
+[00:52:43] Epoch 300  Loss: 0.1517  L_pred:0.1480  L_time:0.0074    train.py:203
+           Loss:0.1517                                                          
+Eval Epoch 300 (team) MALE [0.44380491971969604, 0.4420826733112335, 
+0.4396246671676636, 0.45606857538223267, 0.4664023518562317]  RMSLE 
+[0.517120361328125, 0.5457935333251953, 0.5604097843170166, 0.5833644866943359, 
+0.5996067523956299]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch300_ma
+le0_0.4438_male1_0.4421_male2_0.4396_male3_0.4561_male4_0.4664_team.pt
+[00:59:10] Epoch 301  Loss: 0.1523  L_pred:0.1487  L_time:0.0072    train.py:203
+           Loss:0.1523                                                          
+[01:00:03] Epoch 302  Loss: 0.1523  L_pred:0.1486  L_time:0.0074    train.py:203
+           Loss:0.1523                                                          
+[01:00:57] Epoch 303  Loss: 0.1528  L_pred:0.1492  L_time:0.0071    train.py:203
+           Loss:0.1528                                                          
+[01:01:51] Epoch 304  Loss: 0.1520  L_pred:0.1483  L_time:0.0073    train.py:203
+           Loss:0.1520                                                          
+[01:02:45] Epoch 305  Loss: 0.1504  L_pred:0.1470  L_time:0.0069    train.py:203
+           Loss:0.1504                                                          
+[01:03:39] Epoch 306  Loss: 0.1498  L_pred:0.1462  L_time:0.0071    train.py:203
+           Loss:0.1498                                                          
+[01:04:33] Epoch 307  Loss: 0.1502  L_pred:0.1467  L_time:0.0071    train.py:203
+           Loss:0.1502                                                          
+[01:05:26] Epoch 308  Loss: 0.1491  L_pred:0.1455  L_time:0.0071    train.py:203
+           Loss:0.1491                                                          
+[01:06:20] Epoch 309  Loss: 0.1497  L_pred:0.1461  L_time:0.0071    train.py:203
+           Loss:0.1497                                                          
+[01:07:14] Epoch 310  Loss: 0.1482  L_pred:0.1447  L_time:0.0070    train.py:203
+           Loss:0.1482                                                          
+[01:08:08] Epoch 311  Loss: 0.1481  L_pred:0.1446  L_time:0.0070    train.py:203
+           Loss:0.1481                                                          
+[01:09:01] Epoch 312  Loss: 0.1473  L_pred:0.1439  L_time:0.0069    train.py:203
+           Loss:0.1473                                                          
+[01:09:55] Epoch 313  Loss: 0.1465  L_pred:0.1430  L_time:0.0069    train.py:203
+           Loss:0.1465                                                          
+[01:10:48] Epoch 314  Loss: 0.1472  L_pred:0.1437  L_time:0.0070    train.py:203
+           Loss:0.1472                                                          
+[01:11:42] Epoch 315  Loss: 0.1466  L_pred:0.1432  L_time:0.0068    train.py:203
+           Loss:0.1466                                                          
+[01:12:36] Epoch 316  Loss: 0.1470  L_pred:0.1435  L_time:0.0069    train.py:203
+           Loss:0.1470                                                          
+[01:13:29] Epoch 317  Loss: 0.1471  L_pred:0.1438  L_time:0.0067    train.py:203
+           Loss:0.1471                                                          
+[01:14:23] Epoch 318  Loss: 0.1479  L_pred:0.1445  L_time:0.0069    train.py:203
+           Loss:0.1479                                                          
+[01:15:16] Epoch 319  Loss: 0.1478  L_pred:0.1446  L_time:0.0064    train.py:203
+           Loss:0.1478                                                          
+[01:16:10] Epoch 320  Loss: 0.1484  L_pred:0.1448  L_time:0.0070    train.py:203
+           Loss:0.1484                                                          
+[01:17:03] Epoch 321  Loss: 0.1473  L_pred:0.1440  L_time:0.0066    train.py:203
+           Loss:0.1473                                                          
+[01:17:57] Epoch 322  Loss: 0.1462  L_pred:0.1428  L_time:0.0067    train.py:203
+           Loss:0.1462                                                          
+[01:18:50] Epoch 323  Loss: 0.1446  L_pred:0.1414  L_time:0.0064    train.py:203
+           Loss:0.1446                                                          
+[01:19:44] Epoch 324  Loss: 0.1437  L_pred:0.1404  L_time:0.0066    train.py:203
+           Loss:0.1437                                                          
+[01:20:37] Epoch 325  Loss: 0.1449  L_pred:0.1416  L_time:0.0066    train.py:203
+           Loss:0.1449                                                          
+Eval Epoch 325 (team) MALE [0.43722665309906006, 0.4304700791835785, 
+0.4248914122581482, 0.4382963180541992, 0.44945064187049866]  RMSLE 
+[0.5086748003959656, 0.532485842704773, 0.5433962345123291, 0.5636732578277588, 
+0.5807157754898071]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch325_ma
+le0_0.4372_male1_0.4305_male2_0.4249_male3_0.4383_male4_0.4495_team.pt
+[01:27:03] Epoch 326  Loss: 0.1464  L_pred:0.1432  L_time:0.0063    train.py:203
+           Loss:0.1464                                                          
+[01:27:57] Epoch 327  Loss: 0.1469  L_pred:0.1435  L_time:0.0068    train.py:203
+           Loss:0.1469                                                          
+[01:28:51] Epoch 328  Loss: 0.1479  L_pred:0.1448  L_time:0.0062    train.py:203
+           Loss:0.1479                                                          
+[01:29:44] Epoch 329  Loss: 0.1470  L_pred:0.1437  L_time:0.0067    train.py:203
+           Loss:0.1470                                                          
+[01:30:38] Epoch 330  Loss: 0.1449  L_pred:0.1418  L_time:0.0062    train.py:203
+           Loss:0.1449                                                          
+[01:31:32] Epoch 331  Loss: 0.1418  L_pred:0.1386  L_time:0.0064    train.py:203
+           Loss:0.1418                                                          
+[01:32:25] Epoch 332  Loss: 0.1428  L_pred:0.1395  L_time:0.0065    train.py:203
+           Loss:0.1428                                                          
+[01:33:19] Epoch 333  Loss: 0.1453  L_pred:0.1422  L_time:0.0061    train.py:203
+           Loss:0.1453                                                          
+[01:34:12] Epoch 334  Loss: 0.1465  L_pred:0.1432  L_time:0.0066    train.py:203
+           Loss:0.1465                                                          
+[01:35:06] Epoch 335  Loss: 0.1455  L_pred:0.1424  L_time:0.0061    train.py:203
+           Loss:0.1455                                                          
+[01:36:00] Epoch 336  Loss: 0.1417  L_pred:0.1385  L_time:0.0064    train.py:203
+           Loss:0.1417                                                          
+[01:36:54] Epoch 337  Loss: 0.1410  L_pred:0.1378  L_time:0.0063    train.py:203
+           Loss:0.1410                                                          
+[01:37:47] Epoch 338  Loss: 0.1421  L_pred:0.1390  L_time:0.0060    train.py:203
+           Loss:0.1421                                                          
+[01:38:41] Epoch 339  Loss: 0.1428  L_pred:0.1396  L_time:0.0065    train.py:203
+           Loss:0.1428                                                          
+[01:39:34] Epoch 340  Loss: 0.1417  L_pred:0.1387  L_time:0.0061    train.py:203
+           Loss:0.1417                                                          
+[01:40:28] Epoch 341  Loss: 0.1398  L_pred:0.1367  L_time:0.0062    train.py:203
+           Loss:0.1398                                                          
+[01:41:22] Epoch 342  Loss: 0.1402  L_pred:0.1371  L_time:0.0063    train.py:203
+           Loss:0.1402                                                          
+[01:42:15] Epoch 343  Loss: 0.1433  L_pred:0.1403  L_time:0.0059    train.py:203
+           Loss:0.1433                                                          
+[01:43:09] Epoch 344  Loss: 0.1421  L_pred:0.1390  L_time:0.0063    train.py:203
+           Loss:0.1421                                                          
+[01:44:03] Epoch 345  Loss: 0.1399  L_pred:0.1369  L_time:0.0060    train.py:203
+           Loss:0.1399                                                          
+[01:44:56] Epoch 346  Loss: 0.1383  L_pred:0.1353  L_time:0.0061    train.py:203
+           Loss:0.1383                                                          
+[01:45:50] Epoch 347  Loss: 0.1406  L_pred:0.1375  L_time:0.0063    train.py:203
+           Loss:0.1406                                                          
+[01:46:44] Epoch 348  Loss: 0.1419  L_pred:0.1390  L_time:0.0059    train.py:203
+           Loss:0.1419                                                          
+[01:47:38] Epoch 349  Loss: 0.1397  L_pred:0.1366  L_time:0.0062    train.py:203
+           Loss:0.1397                                                          
+[01:48:31] Epoch 350  Loss: 0.1377  L_pred:0.1347  L_time:0.0060    train.py:203
+           Loss:0.1377                                                          
+Eval Epoch 350 (team) MALE [0.43951311707496643, 0.42640072107315063, 
+0.42049193382263184, 0.434928297996521, 0.4464837312698364]  RMSLE 
+[0.5107607841491699, 0.5283889174461365, 0.5397167801856995, 0.5604544878005981,
+0.5772019624710083]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch350_ma
+le0_0.4395_male1_0.4264_male2_0.4205_male3_0.4349_male4_0.4465_team.pt
+[01:54:53] Epoch 351  Loss: 0.1388  L_pred:0.1358  L_time:0.0059    train.py:203
+           Loss:0.1388                                                          
+[01:55:47] Epoch 352  Loss: 0.1401  L_pred:0.1370  L_time:0.0062    train.py:203
+           Loss:0.1401                                                          
+[01:56:40] Epoch 353  Loss: 0.1394  L_pred:0.1365  L_time:0.0058    train.py:203
+           Loss:0.1394                                                          
+[01:57:33] Epoch 354  Loss: 0.1366  L_pred:0.1336  L_time:0.0060    train.py:203
+           Loss:0.1366                                                          
+[01:58:27] Epoch 355  Loss: 0.1374  L_pred:0.1344  L_time:0.0061    train.py:203
+           Loss:0.1374                                                          
+[01:59:21] Epoch 356  Loss: 0.1391  L_pred:0.1362  L_time:0.0058    train.py:203
+           Loss:0.1391                                                          
+[02:00:14] Epoch 357  Loss: 0.1379  L_pred:0.1349  L_time:0.0060    train.py:203
+           Loss:0.1379                                                          
+[02:01:08] Epoch 358  Loss: 0.1362  L_pred:0.1333  L_time:0.0058    train.py:203
+           Loss:0.1362                                                          
+[02:02:03] Epoch 359  Loss: 0.1368  L_pred:0.1339  L_time:0.0058    train.py:203
+           Loss:0.1368                                                          
+[02:02:56] Epoch 360  Loss: 0.1378  L_pred:0.1348  L_time:0.0060    train.py:203
+           Loss:0.1378                                                          
+[02:03:50] Epoch 361  Loss: 0.1374  L_pred:0.1346  L_time:0.0057    train.py:203
+           Loss:0.1374                                                          
+[02:04:44] Epoch 362  Loss: 0.1358  L_pred:0.1329  L_time:0.0058    train.py:203
+           Loss:0.1358                                                          
+[02:05:38] Epoch 363  Loss: 0.1358  L_pred:0.1328  L_time:0.0060    train.py:203
+           Loss:0.1358                                                          
+[02:06:32] Epoch 364  Loss: 0.1371  L_pred:0.1343  L_time:0.0056    train.py:203
+           Loss:0.1371                                                          
+[02:07:26] Epoch 365  Loss: 0.1367  L_pred:0.1337  L_time:0.0059    train.py:203
+           Loss:0.1367                                                          
+[02:08:20] Epoch 366  Loss: 0.1346  L_pred:0.1318  L_time:0.0057    train.py:203
+           Loss:0.1346                                                          
+[02:09:13] Epoch 367  Loss: 0.1345  L_pred:0.1316  L_time:0.0057    train.py:203
+           Loss:0.1345                                                          
+[02:10:07] Epoch 368  Loss: 0.1343  L_pred:0.1314  L_time:0.0058    train.py:203
+           Loss:0.1343                                                          
+[02:11:01] Epoch 369  Loss: 0.1341  L_pred:0.1313  L_time:0.0056    train.py:203
+           Loss:0.1341                                                          
+[02:11:55] Epoch 370  Loss: 0.1338  L_pred:0.1309  L_time:0.0057    train.py:203
+           Loss:0.1338                                                          
+[02:12:49] Epoch 371  Loss: 0.1340  L_pred:0.1311  L_time:0.0057    train.py:203
+           Loss:0.1340                                                          
+[02:13:42] Epoch 372  Loss: 0.1338  L_pred:0.1310  L_time:0.0056    train.py:203
+           Loss:0.1338                                                          
+[02:14:36] Epoch 373  Loss: 0.1339  L_pred:0.1311  L_time:0.0057    train.py:203
+           Loss:0.1339                                                          
+[02:15:30] Epoch 374  Loss: 0.1333  L_pred:0.1306  L_time:0.0055    train.py:203
+           Loss:0.1333                                                          
+[02:16:23] Epoch 375  Loss: 0.1332  L_pred:0.1304  L_time:0.0056    train.py:203
+           Loss:0.1332                                                          
+Eval Epoch 375 (team) MALE [0.44487205147743225, 0.42926666140556335, 
+0.4246991276741028, 0.4416932463645935, 0.45168665051460266]  RMSLE 
+[0.5165936350822449, 0.5318859815597534, 0.5449375510215759, 0.5676154494285583,
+0.5825896263122559]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch375_ma
+le0_0.4449_male1_0.4293_male2_0.4247_male3_0.4417_male4_0.4517_team.pt
+[02:22:52] Epoch 376  Loss: 0.1329  L_pred:0.1301  L_time:0.0056    train.py:203
+           Loss:0.1329                                                          
+[02:23:46] Epoch 377  Loss: 0.1329  L_pred:0.1302  L_time:0.0055    train.py:203
+           Loss:0.1329                                                          
+[02:24:39] Epoch 378  Loss: 0.1336  L_pred:0.1308  L_time:0.0056    train.py:203
+           Loss:0.1336                                                          
+[02:25:33] Epoch 379  Loss: 0.1329  L_pred:0.1302  L_time:0.0054    train.py:203
+           Loss:0.1329                                                          
+[02:26:27] Epoch 380  Loss: 0.1321  L_pred:0.1293  L_time:0.0055    train.py:203
+           Loss:0.1321                                                          
+[02:27:21] Epoch 381  Loss: 0.1317  L_pred:0.1290  L_time:0.0054    train.py:203
+           Loss:0.1317                                                          
+[02:28:15] Epoch 382  Loss: 0.1322  L_pred:0.1295  L_time:0.0055    train.py:203
+           Loss:0.1322                                                          
+[02:29:09] Epoch 383  Loss: 0.1324  L_pred:0.1296  L_time:0.0056    train.py:203
+           Loss:0.1324                                                          
+[02:30:03] Epoch 384  Loss: 0.1322  L_pred:0.1295  L_time:0.0054    train.py:203
+           Loss:0.1322                                                          
+[02:30:57] Epoch 385  Loss: 0.1315  L_pred:0.1287  L_time:0.0055    train.py:203
+           Loss:0.1315                                                          
+[02:31:51] Epoch 386  Loss: 0.1310  L_pred:0.1283  L_time:0.0053    train.py:203
+           Loss:0.1310                                                          
+[02:32:45] Epoch 387  Loss: 0.1311  L_pred:0.1284  L_time:0.0054    train.py:203
+           Loss:0.1311                                                          
+[02:33:39] Epoch 388  Loss: 0.1315  L_pred:0.1287  L_time:0.0054    train.py:203
+           Loss:0.1315                                                          
+[02:34:32] Epoch 389  Loss: 0.1313  L_pred:0.1287  L_time:0.0054    train.py:203
+           Loss:0.1313                                                          
+[02:35:26] Epoch 390  Loss: 0.1305  L_pred:0.1278  L_time:0.0054    train.py:203
+           Loss:0.1305                                                          
+[02:36:20] Epoch 391  Loss: 0.1308  L_pred:0.1282  L_time:0.0053    train.py:203
+           Loss:0.1308                                                          
+[02:37:14] Epoch 392  Loss: 0.1304  L_pred:0.1277  L_time:0.0054    train.py:203
+           Loss:0.1304                                                          
+[02:38:07] Epoch 393  Loss: 0.1300  L_pred:0.1274  L_time:0.0052    train.py:203
+           Loss:0.1300                                                          
+[02:39:01] Epoch 394  Loss: 0.1304  L_pred:0.1277  L_time:0.0054    train.py:203
+           Loss:0.1304                                                          
+[02:39:55] Epoch 395  Loss: 0.1294  L_pred:0.1267  L_time:0.0052    train.py:203
+           Loss:0.1294                                                          
+[02:40:48] Epoch 396  Loss: 0.1298  L_pred:0.1272  L_time:0.0052    train.py:203
+           Loss:0.1298                                                          
+[02:41:42] Epoch 397  Loss: 0.1304  L_pred:0.1278  L_time:0.0053    train.py:203
+           Loss:0.1304                                                          
+[02:42:35] Epoch 398  Loss: 0.1299  L_pred:0.1273  L_time:0.0052    train.py:203
+           Loss:0.1299                                                          
+[02:43:29] Epoch 399  Loss: 0.1295  L_pred:0.1269  L_time:0.0053    train.py:203
+           Loss:0.1295                                                          
+[02:44:23] Epoch 400  Loss: 0.1292  L_pred:0.1266  L_time:0.0052    train.py:203
+           Loss:0.1292                                                          
+Eval Epoch 400 (team) MALE [0.4474780857563019, 0.4292523264884949, 
+0.4258615970611572, 0.4439847767353058, 0.45286527276039124]  RMSLE 
+[0.5196493864059448, 0.5319932103157043, 0.5463804602622986, 0.5697823166847229,
+0.5837332010269165]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch400_ma
+le0_0.4475_male1_0.4293_male2_0.4259_male3_0.4440_male4_0.4529_team.pt
+[02:50:48] Epoch 401  Loss: 0.1291  L_pred:0.1264  L_time:0.0053    train.py:203
+           Loss:0.1291                                                          
+[02:51:42] Epoch 402  Loss: 0.1290  L_pred:0.1264  L_time:0.0051    train.py:203
+           Loss:0.1290                                                          
+[02:52:35] Epoch 403  Loss: 0.1286  L_pred:0.1260  L_time:0.0052    train.py:203
+           Loss:0.1286                                                          
+[02:53:28] Epoch 404  Loss: 0.1287  L_pred:0.1261  L_time:0.0052    train.py:203
+           Loss:0.1287                                                          
+[02:54:22] Epoch 405  Loss: 0.1291  L_pred:0.1265  L_time:0.0051    train.py:203
+           Loss:0.1291                                                          
+[02:55:16] Epoch 406  Loss: 0.1291  L_pred:0.1265  L_time:0.0052    train.py:203
+           Loss:0.1291                                                          
+[02:56:10] Epoch 407  Loss: 0.1291  L_pred:0.1266  L_time:0.0050    train.py:203
+           Loss:0.1291                                                          
+[02:57:04] Epoch 408  Loss: 0.1290  L_pred:0.1264  L_time:0.0052    train.py:203
+           Loss:0.1290                                                          
+[02:57:57] Epoch 409  Loss: 0.1290  L_pred:0.1265  L_time:0.0050    train.py:203
+           Loss:0.1290                                                          
+[02:58:51] Epoch 410  Loss: 0.1281  L_pred:0.1256  L_time:0.0051    train.py:203
+           Loss:0.1281                                                          
+[02:59:45] Epoch 411  Loss: 0.1284  L_pred:0.1259  L_time:0.0049    train.py:203
+           Loss:0.1284                                                          
+[03:00:38] Epoch 412  Loss: 0.1283  L_pred:0.1258  L_time:0.0051    train.py:203
+           Loss:0.1283                                                          
+[03:01:32] Epoch 413  Loss: 0.1275  L_pred:0.1250  L_time:0.0050    train.py:203
+           Loss:0.1275                                                          
+[03:02:26] Epoch 414  Loss: 0.1275  L_pred:0.1249  L_time:0.0051    train.py:203
+           Loss:0.1275                                                          
+[03:03:20] Epoch 415  Loss: 0.1272  L_pred:0.1247  L_time:0.0050    train.py:203
+           Loss:0.1272                                                          
+[03:04:14] Epoch 416  Loss: 0.1266  L_pred:0.1241  L_time:0.0050    train.py:203
+           Loss:0.1266                                                          
+[03:05:08] Epoch 417  Loss: 0.1272  L_pred:0.1247  L_time:0.0050    train.py:203
+           Loss:0.1272                                                          
+[03:06:01] Epoch 418  Loss: 0.1268  L_pred:0.1243  L_time:0.0049    train.py:203
+           Loss:0.1268                                                          
+[03:06:54] Epoch 419  Loss: 0.1270  L_pred:0.1245  L_time:0.0051    train.py:203
+           Loss:0.1270                                                          
+[03:07:48] Epoch 420  Loss: 0.1277  L_pred:0.1253  L_time:0.0048    train.py:203
+           Loss:0.1277                                                          
+[03:08:41] Epoch 421  Loss: 0.1287  L_pred:0.1262  L_time:0.0050    train.py:203
+           Loss:0.1287                                                          
+[03:09:35] Epoch 422  Loss: 0.1301  L_pred:0.1277  L_time:0.0048    train.py:203
+           Loss:0.1301                                                          
+[03:10:29] Epoch 423  Loss: 0.1305  L_pred:0.1279  L_time:0.0051    train.py:203
+           Loss:0.1305                                                          
+[03:11:22] Epoch 424  Loss: 0.1313  L_pred:0.1290  L_time:0.0046    train.py:203
+           Loss:0.1313                                                          
+[03:12:16] Epoch 425  Loss: 0.1293  L_pred:0.1268  L_time:0.0050    train.py:203
+           Loss:0.1293                                                          
+Eval Epoch 425 (team) MALE [0.4351677894592285, 0.41373974084854126, 
+0.40441271662712097, 0.41772931814193726, 0.42858487367630005]  RMSLE 
+[0.5046764612197876, 0.5136132836341858, 0.5223214626312256, 0.541602611541748, 
+0.5579688549041748]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch425_ma
+le0_0.4352_male1_0.4137_male2_0.4044_male3_0.4177_male4_0.4286_team.pt
+[03:18:43] Epoch 426  Loss: 0.1275  L_pred:0.1251  L_time:0.0048    train.py:203
+           Loss:0.1275                                                          
+[03:19:36] Epoch 427  Loss: 0.1253  L_pred:0.1229  L_time:0.0049    train.py:203
+           Loss:0.1253                                                          
+[03:20:30] Epoch 428  Loss: 0.1259  L_pred:0.1235  L_time:0.0049    train.py:203
+           Loss:0.1259                                                          
+[03:21:23] Epoch 429  Loss: 0.1277  L_pred:0.1254  L_time:0.0047    train.py:203
+           Loss:0.1277                                                          
+[03:22:17] Epoch 430  Loss: 0.1283  L_pred:0.1257  L_time:0.0050    train.py:203
+           Loss:0.1283                                                          
+[03:23:10] Epoch 431  Loss: 0.1274  L_pred:0.1251  L_time:0.0047    train.py:203
+           Loss:0.1274                                                          
+[03:24:04] Epoch 432  Loss: 0.1257  L_pred:0.1232  L_time:0.0049    train.py:203
+           Loss:0.1257                                                          
+[03:24:58] Epoch 433  Loss: 0.1247  L_pred:0.1223  L_time:0.0048    train.py:203
+           Loss:0.1247                                                          
+[03:25:52] Epoch 434  Loss: 0.1254  L_pred:0.1230  L_time:0.0047    train.py:203
+           Loss:0.1254                                                          
+[03:26:45] Epoch 435  Loss: 0.1268  L_pred:0.1244  L_time:0.0050    train.py:203
+           Loss:0.1268                                                          
+[03:27:39] Epoch 436  Loss: 0.1281  L_pred:0.1258  L_time:0.0046    train.py:203
+           Loss:0.1281                                                          
+[03:28:33] Epoch 437  Loss: 0.1266  L_pred:0.1241  L_time:0.0049    train.py:203
+           Loss:0.1266                                                          
+[03:29:27] Epoch 438  Loss: 0.1251  L_pred:0.1228  L_time:0.0047    train.py:203
+           Loss:0.1251                                                          
+[03:30:21] Epoch 439  Loss: 0.1236  L_pred:0.1212  L_time:0.0047    train.py:203
+           Loss:0.1236                                                          
+[03:31:14] Epoch 440  Loss: 0.1250  L_pred:0.1225  L_time:0.0049    train.py:203
+           Loss:0.1250                                                          
+[03:32:08] Epoch 441  Loss: 0.1260  L_pred:0.1237  L_time:0.0046    train.py:203
+           Loss:0.1260                                                          
+[03:33:02] Epoch 442  Loss: 0.1257  L_pred:0.1233  L_time:0.0049    train.py:203
+           Loss:0.1257                                                          
+[03:33:56] Epoch 443  Loss: 0.1247  L_pred:0.1224  L_time:0.0047    train.py:203
+           Loss:0.1247                                                          
+[03:34:50] Epoch 444  Loss: 0.1237  L_pred:0.1213  L_time:0.0047    train.py:203
+           Loss:0.1237                                                          
+[03:35:44] Epoch 445  Loss: 0.1242  L_pred:0.1218  L_time:0.0048    train.py:203
+           Loss:0.1242                                                          
+[03:36:38] Epoch 446  Loss: 0.1245  L_pred:0.1222  L_time:0.0046    train.py:203
+           Loss:0.1245                                                          
+[03:37:32] Epoch 447  Loss: 0.1237  L_pred:0.1213  L_time:0.0048    train.py:203
+           Loss:0.1237                                                          
+[03:38:25] Epoch 448  Loss: 0.1231  L_pred:0.1208  L_time:0.0047    train.py:203
+           Loss:0.1231                                                          
+[03:39:19] Epoch 449  Loss: 0.1231  L_pred:0.1207  L_time:0.0047    train.py:203
+           Loss:0.1231                                                          
+[03:40:13] Epoch 450  Loss: 0.1227  L_pred:0.1203  L_time:0.0047    train.py:203
+           Loss:0.1227                                                          
+Eval Epoch 450 (team) MALE [0.441779226064682, 0.41959598660469055, 
+0.4121657907962799, 0.4269760549068451, 0.43646353483200073]  RMSLE 
+[0.5119391679763794, 0.520476222038269, 0.5311840772628784, 0.5517377257347107, 
+0.5656253099441528]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch450_ma
+le0_0.4418_male1_0.4196_male2_0.4122_male3_0.4270_male4_0.4365_team.pt
+[03:46:38] Epoch 451  Loss: 0.1230  L_pred:0.1207  L_time:0.0046    train.py:203
+           Loss:0.1230                                                          
+[03:47:32] Epoch 452  Loss: 0.1228  L_pred:0.1205  L_time:0.0046    train.py:203
+           Loss:0.1228                                                          
+[03:48:26] Epoch 453  Loss: 0.1227  L_pred:0.1204  L_time:0.0046    train.py:203
+           Loss:0.1227                                                          
+[03:49:20] Epoch 454  Loss: 0.1225  L_pred:0.1201  L_time:0.0046    train.py:203
+           Loss:0.1225                                                          
+[03:50:14] Epoch 455  Loss: 0.1223  L_pred:0.1200  L_time:0.0047    train.py:203
+           Loss:0.1223                                                          
+[03:51:08] Epoch 456  Loss: 0.1223  L_pred:0.1200  L_time:0.0046    train.py:203
+           Loss:0.1223                                                          
+[03:52:02] Epoch 457  Loss: 0.1221  L_pred:0.1199  L_time:0.0046    train.py:203
+           Loss:0.1221                                                          
+[03:52:55] Epoch 458  Loss: 0.1222  L_pred:0.1200  L_time:0.0045    train.py:203
+           Loss:0.1222                                                          
+[03:53:49] Epoch 459  Loss: 0.1221  L_pred:0.1198  L_time:0.0046    train.py:203
+           Loss:0.1221                                                          
+[03:54:43] Epoch 460  Loss: 0.1218  L_pred:0.1195  L_time:0.0045    train.py:203
+           Loss:0.1218                                                          
+[03:55:36] Epoch 461  Loss: 0.1213  L_pred:0.1191  L_time:0.0045    train.py:203
+           Loss:0.1213                                                          
+[03:56:30] Epoch 462  Loss: 0.1221  L_pred:0.1198  L_time:0.0046    train.py:203
+           Loss:0.1221                                                          
+[03:57:24] Epoch 463  Loss: 0.1225  L_pred:0.1202  L_time:0.0045    train.py:203
+           Loss:0.1225                                                          
+[03:58:17] Epoch 464  Loss: 0.1218  L_pred:0.1196  L_time:0.0045    train.py:203
+           Loss:0.1218                                                          
+[03:59:11] Epoch 465  Loss: 0.1216  L_pred:0.1193  L_time:0.0045    train.py:203
+           Loss:0.1216                                                          
+[04:00:05] Epoch 466  Loss: 0.1209  L_pred:0.1187  L_time:0.0045    train.py:203
+           Loss:0.1209                                                          
+[04:00:59] Epoch 467  Loss: 0.1214  L_pred:0.1192  L_time:0.0044    train.py:203
+           Loss:0.1214                                                          
+[04:01:53] Epoch 468  Loss: 0.1211  L_pred:0.1189  L_time:0.0045    train.py:203
+           Loss:0.1211                                                          
+[04:02:46] Epoch 469  Loss: 0.1209  L_pred:0.1186  L_time:0.0045    train.py:203
+           Loss:0.1209                                                          
+[04:03:40] Epoch 470  Loss: 0.1211  L_pred:0.1188  L_time:0.0044    train.py:203
+           Loss:0.1211                                                          
+[04:04:34] Epoch 471  Loss: 0.1213  L_pred:0.1191  L_time:0.0045    train.py:203
+           Loss:0.1213                                                          
+[04:05:27] Epoch 472  Loss: 0.1208  L_pred:0.1186  L_time:0.0044    train.py:203
+           Loss:0.1208                                                          
+[04:06:21] Epoch 473  Loss: 0.1214  L_pred:0.1191  L_time:0.0045    train.py:203
+           Loss:0.1214                                                          
+[04:07:14] Epoch 474  Loss: 0.1215  L_pred:0.1193  L_time:0.0044    train.py:203
+           Loss:0.1215                                                          
+[04:08:08] Epoch 475  Loss: 0.1211  L_pred:0.1189  L_time:0.0044    train.py:203
+           Loss:0.1211                                                          
+Eval Epoch 475 (team) MALE [0.43908748030662537, 0.4145011901855469, 
+0.40586113929748535, 0.4201259911060333, 0.43004918098449707]  RMSLE 
+[0.5083463191986084, 0.5147267580032349, 0.5242041349411011, 0.5443351864814758,
+0.5588905811309814]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch475_ma
+le0_0.4391_male1_0.4145_male2_0.4059_male3_0.4201_male4_0.4300_team.pt
+[04:14:36] Epoch 476  Loss: 0.1206  L_pred:0.1184  L_time:0.0043    train.py:203
+           Loss:0.1206                                                          
+[04:15:30] Epoch 477  Loss: 0.1209  L_pred:0.1186  L_time:0.0045    train.py:203
+           Loss:0.1209                                                          
+[04:16:24] Epoch 478  Loss: 0.1202  L_pred:0.1181  L_time:0.0043    train.py:203
+           Loss:0.1202                                                          
+[04:17:17] Epoch 479  Loss: 0.1203  L_pred:0.1181  L_time:0.0044    train.py:203
+           Loss:0.1203                                                          
+[04:18:11] Epoch 480  Loss: 0.1206  L_pred:0.1184  L_time:0.0044    train.py:203
+           Loss:0.1206                                                          
+[04:19:05] Epoch 481  Loss: 0.1207  L_pred:0.1185  L_time:0.0043    train.py:203
+           Loss:0.1207                                                          
+[04:19:58] Epoch 482  Loss: 0.1207  L_pred:0.1184  L_time:0.0044    train.py:203
+           Loss:0.1207                                                          
+[04:20:52] Epoch 483  Loss: 0.1206  L_pred:0.1185  L_time:0.0043    train.py:203
+           Loss:0.1206                                                          
+[04:21:46] Epoch 484  Loss: 0.1210  L_pred:0.1188  L_time:0.0044    train.py:203
+           Loss:0.1210                                                          
+[04:22:40] Epoch 485  Loss: 0.1199  L_pred:0.1177  L_time:0.0042    train.py:203
+           Loss:0.1199                                                          
+[04:23:33] Epoch 486  Loss: 0.1204  L_pred:0.1183  L_time:0.0043    train.py:203
+           Loss:0.1204                                                          
+[04:24:27] Epoch 487  Loss: 0.1197  L_pred:0.1175  L_time:0.0043    train.py:203
+           Loss:0.1197                                                          
+[04:25:21] Epoch 488  Loss: 0.1192  L_pred:0.1171  L_time:0.0043    train.py:203
+           Loss:0.1192                                                          
+[04:26:15] Epoch 489  Loss: 0.1195  L_pred:0.1174  L_time:0.0043    train.py:203
+           Loss:0.1195                                                          
+[04:27:08] Epoch 490  Loss: 0.1200  L_pred:0.1179  L_time:0.0042    train.py:203
+           Loss:0.1200                                                          
+[04:28:02] Epoch 491  Loss: 0.1201  L_pred:0.1178  L_time:0.0044    train.py:203
+           Loss:0.1201                                                          
+[04:28:56] Epoch 492  Loss: 0.1199  L_pred:0.1178  L_time:0.0042    train.py:203
+           Loss:0.1199                                                          
+[04:29:50] Epoch 493  Loss: 0.1202  L_pred:0.1181  L_time:0.0043    train.py:203
+           Loss:0.1202                                                          
+[04:30:44] Epoch 494  Loss: 0.1199  L_pred:0.1178  L_time:0.0042    train.py:203
+           Loss:0.1199                                                          
+[04:31:37] Epoch 495  Loss: 0.1195  L_pred:0.1174  L_time:0.0043    train.py:203
+           Loss:0.1195                                                          
+[04:32:31] Epoch 496  Loss: 0.1188  L_pred:0.1167  L_time:0.0042    train.py:203
+           Loss:0.1188                                                          
+[04:33:24] Epoch 497  Loss: 0.1190  L_pred:0.1169  L_time:0.0043    train.py:203
+           Loss:0.1190                                                          
+[04:34:18] Epoch 498  Loss: 0.1190  L_pred:0.1169  L_time:0.0042    train.py:203
+           Loss:0.1190                                                          
+[04:35:11] Epoch 499  Loss: 0.1185  L_pred:0.1164  L_time:0.0042    train.py:203
+           Loss:0.1185                                                          
+[04:36:05] Epoch 500  Loss: 0.1185  L_pred:0.1164  L_time:0.0042    train.py:203
+           Loss:0.1185                                                          
+Eval Epoch 500 (team) MALE [0.44293925166130066, 0.4191485047340393, 
+0.411853551864624, 0.42705246806144714, 0.4356405436992645]  RMSLE 
+[0.5126506686210632, 0.5197325348854065, 0.5307447910308838, 0.5517572164535522,
+0.5645414590835571]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch500_ma
+le0_0.4429_male1_0.4191_male2_0.4119_male3_0.4271_male4_0.4356_team.pt
+[04:42:31] Epoch 501  Loss: 0.1185  L_pred:0.1164  L_time:0.0042    train.py:203
+           Loss:0.1185                                                          
+[04:43:25] Epoch 502  Loss: 0.1185  L_pred:0.1164  L_time:0.0042    train.py:203
+           Loss:0.1185                                                          
+[04:44:19] Epoch 503  Loss: 0.1180  L_pred:0.1160  L_time:0.0042    train.py:203
+           Loss:0.1180                                                          
+[04:45:13] Epoch 504  Loss: 0.1185  L_pred:0.1164  L_time:0.0042    train.py:203
+           Loss:0.1185                                                          
+[04:46:07] Epoch 505  Loss: 0.1182  L_pred:0.1162  L_time:0.0041    train.py:203
+           Loss:0.1182                                                          
+[04:47:00] Epoch 506  Loss: 0.1187  L_pred:0.1166  L_time:0.0042    train.py:203
+           Loss:0.1187                                                          
+[04:47:54] Epoch 507  Loss: 0.1185  L_pred:0.1165  L_time:0.0040    train.py:203
+           Loss:0.1185                                                          
+[04:48:48] Epoch 508  Loss: 0.1187  L_pred:0.1166  L_time:0.0042    train.py:203
+           Loss:0.1187                                                          
+[04:49:42] Epoch 509  Loss: 0.1197  L_pred:0.1177  L_time:0.0041    train.py:203
+           Loss:0.1197                                                          
+[04:50:36] Epoch 510  Loss: 0.1188  L_pred:0.1167  L_time:0.0042    train.py:203
+           Loss:0.1188                                                          
+[04:51:30] Epoch 511  Loss: 0.1181  L_pred:0.1161  L_time:0.0040    train.py:203
+           Loss:0.1181                                                          
+[04:52:24] Epoch 512  Loss: 0.1176  L_pred:0.1155  L_time:0.0041    train.py:203
+           Loss:0.1176                                                          
+[04:53:18] Epoch 513  Loss: 0.1180  L_pred:0.1159  L_time:0.0042    train.py:203
+           Loss:0.1180                                                          
+[04:54:11] Epoch 514  Loss: 0.1191  L_pred:0.1171  L_time:0.0040    train.py:203
+           Loss:0.1191                                                          
+[04:55:05] Epoch 515  Loss: 0.1199  L_pred:0.1178  L_time:0.0042    train.py:203
+           Loss:0.1199                                                          
+[04:55:58] Epoch 516  Loss: 0.1216  L_pred:0.1196  L_time:0.0039    train.py:203
+           Loss:0.1216                                                          
+[04:56:52] Epoch 517  Loss: 0.1213  L_pred:0.1192  L_time:0.0042    train.py:203
+           Loss:0.1213                                                          
+[04:57:46] Epoch 518  Loss: 0.1214  L_pred:0.1195  L_time:0.0038    train.py:203
+           Loss:0.1214                                                          
+[04:58:39] Epoch 519  Loss: 0.1194  L_pred:0.1173  L_time:0.0042    train.py:203
+           Loss:0.1194                                                          
+[04:59:33] Epoch 520  Loss: 0.1183  L_pred:0.1163  L_time:0.0040    train.py:203
+           Loss:0.1183                                                          
+[05:00:27] Epoch 521  Loss: 0.1172  L_pred:0.1152  L_time:0.0040    train.py:203
+           Loss:0.1172                                                          
+[05:01:21] Epoch 522  Loss: 0.1186  L_pred:0.1166  L_time:0.0040    train.py:203
+           Loss:0.1186                                                          
+[05:02:14] Epoch 523  Loss: 0.1190  L_pred:0.1170  L_time:0.0040    train.py:203
+           Loss:0.1190                                                          
+[05:03:08] Epoch 524  Loss: 0.1193  L_pred:0.1172  L_time:0.0042    train.py:203
+           Loss:0.1193                                                          
+[05:04:02] Epoch 525  Loss: 0.1186  L_pred:0.1167  L_time:0.0039    train.py:203
+           Loss:0.1186                                                          
+Eval Epoch 525 (team) MALE [0.44916942715644836, 0.4281623661518097, 
+0.42442697286605835, 0.4412880539894104, 0.44750311970710754]  RMSLE 
+[0.519511342048645, 0.5295270681381226, 0.5435760617256165, 0.5658432841300964, 
+0.5760403871536255]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch525_ma
+le0_0.4492_male1_0.4282_male2_0.4244_male3_0.4413_male4_0.4475_team.pt
+[05:10:30] Epoch 526  Loss: 0.1180  L_pred:0.1160  L_time:0.0040    train.py:203
+           Loss:0.1180                                                          
+[05:11:24] Epoch 527  Loss: 0.1176  L_pred:0.1156  L_time:0.0040    train.py:203
+           Loss:0.1176                                                          
+[05:12:17] Epoch 528  Loss: 0.1168  L_pred:0.1148  L_time:0.0040    train.py:203
+           Loss:0.1168                                                          
+[05:13:11] Epoch 529  Loss: 0.1176  L_pred:0.1156  L_time:0.0040    train.py:203
+           Loss:0.1176                                                          
+[05:14:04] Epoch 530  Loss: 0.1189  L_pred:0.1170  L_time:0.0038    train.py:203
+           Loss:0.1189                                                          
+[05:14:58] Epoch 531  Loss: 0.1193  L_pred:0.1173  L_time:0.0041    train.py:203
+           Loss:0.1193                                                          
+[05:15:52] Epoch 532  Loss: 0.1191  L_pred:0.1172  L_time:0.0038    train.py:203
+           Loss:0.1191                                                          
+[05:16:46] Epoch 533  Loss: 0.1179  L_pred:0.1159  L_time:0.0040    train.py:203
+           Loss:0.1179                                                          
+[05:17:40] Epoch 534  Loss: 0.1162  L_pred:0.1143  L_time:0.0039    train.py:203
+           Loss:0.1162                                                          
+[05:18:34] Epoch 535  Loss: 0.1168  L_pred:0.1148  L_time:0.0039    train.py:203
+           Loss:0.1168                                                          
+[05:19:27] Epoch 536  Loss: 0.1175  L_pred:0.1155  L_time:0.0040    train.py:203
+           Loss:0.1175                                                          
+[05:20:21] Epoch 537  Loss: 0.1178  L_pred:0.1159  L_time:0.0038    train.py:203
+           Loss:0.1178                                                          
+[05:21:15] Epoch 538  Loss: 0.1168  L_pred:0.1148  L_time:0.0039    train.py:203
+           Loss:0.1168                                                          
+[05:22:09] Epoch 539  Loss: 0.1161  L_pred:0.1141  L_time:0.0039    train.py:203
+           Loss:0.1161                                                          
+[05:23:03] Epoch 540  Loss: 0.1157  L_pred:0.1137  L_time:0.0039    train.py:203
+           Loss:0.1157                                                          
+[05:23:56] Epoch 541  Loss: 0.1163  L_pred:0.1143  L_time:0.0040    train.py:203
+           Loss:0.1163                                                          
+[05:24:50] Epoch 542  Loss: 0.1164  L_pred:0.1145  L_time:0.0038    train.py:203
+           Loss:0.1164                                                          
+[05:25:44] Epoch 543  Loss: 0.1166  L_pred:0.1146  L_time:0.0040    train.py:203
+           Loss:0.1166                                                          
+[05:26:38] Epoch 544  Loss: 0.1157  L_pred:0.1138  L_time:0.0038    train.py:203
+           Loss:0.1157                                                          
+[05:27:33] Epoch 545  Loss: 0.1158  L_pred:0.1139  L_time:0.0039    train.py:203
+           Loss:0.1158                                                          
+[05:28:27] Epoch 546  Loss: 0.1151  L_pred:0.1132  L_time:0.0039    train.py:203
+           Loss:0.1151                                                          
+[05:29:21] Epoch 547  Loss: 0.1158  L_pred:0.1139  L_time:0.0038    train.py:203
+           Loss:0.1158                                                          
+[05:30:15] Epoch 548  Loss: 0.1163  L_pred:0.1143  L_time:0.0039    train.py:203
+           Loss:0.1163                                                          
+[05:31:08] Epoch 549  Loss: 0.1162  L_pred:0.1144  L_time:0.0037    train.py:203
+           Loss:0.1162                                                          
+[05:32:03] Epoch 550  Loss: 0.1160  L_pred:0.1140  L_time:0.0039    train.py:203
+           Loss:0.1160                                                          
+Eval Epoch 550 (team) MALE [0.4405462145805359, 0.41383087635040283, 
+0.4056224524974823, 0.4200378358364105, 0.4282909631729126]  RMSLE 
+[0.5098000168800354, 0.513670802116394, 0.5235214233398438, 0.543636679649353, 
+0.5560548305511475]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch550_ma
+le0_0.4405_male1_0.4138_male2_0.4056_male3_0.4200_male4_0.4283_team.pt
+[05:38:31] Epoch 551  Loss: 0.1149  L_pred:0.1130  L_time:0.0038    train.py:203
+           Loss:0.1149                                                          
+[05:39:25] Epoch 552  Loss: 0.1151  L_pred:0.1132  L_time:0.0037    train.py:203
+           Loss:0.1151                                                          
+[05:40:19] Epoch 553  Loss: 0.1163  L_pred:0.1144  L_time:0.0039    train.py:203
+           Loss:0.1163                                                          
+[05:41:13] Epoch 554  Loss: 0.1172  L_pred:0.1153  L_time:0.0037    train.py:203
+           Loss:0.1172                                                          
+[05:42:06] Epoch 555  Loss: 0.1164  L_pred:0.1145  L_time:0.0038    train.py:203
+           Loss:0.1164                                                          
+[05:43:00] Epoch 556  Loss: 0.1158  L_pred:0.1139  L_time:0.0037    train.py:203
+           Loss:0.1158                                                          
+[05:43:54] Epoch 557  Loss: 0.1158  L_pred:0.1139  L_time:0.0038    train.py:203
+           Loss:0.1158                                                          
+[05:44:47] Epoch 558  Loss: 0.1144  L_pred:0.1125  L_time:0.0038    train.py:203
+           Loss:0.1144                                                          
+[05:45:41] Epoch 559  Loss: 0.1159  L_pred:0.1140  L_time:0.0038    train.py:203
+           Loss:0.1159                                                          
+[05:46:35] Epoch 560  Loss: 0.1162  L_pred:0.1143  L_time:0.0039    train.py:203
+           Loss:0.1162                                                          
+[05:47:29] Epoch 561  Loss: 0.1164  L_pred:0.1145  L_time:0.0036    train.py:203
+           Loss:0.1164                                                          
+[05:48:23] Epoch 562  Loss: 0.1159  L_pred:0.1139  L_time:0.0038    train.py:203
+           Loss:0.1159                                                          
+[05:49:16] Epoch 563  Loss: 0.1150  L_pred:0.1131  L_time:0.0037    train.py:203
+           Loss:0.1150                                                          
+[05:50:10] Epoch 564  Loss: 0.1144  L_pred:0.1126  L_time:0.0037    train.py:203
+           Loss:0.1144                                                          
+[05:51:04] Epoch 565  Loss: 0.1149  L_pred:0.1130  L_time:0.0038    train.py:203
+           Loss:0.1149                                                          
+[05:51:58] Epoch 566  Loss: 0.1147  L_pred:0.1129  L_time:0.0037    train.py:203
+           Loss:0.1147                                                          
+[05:52:52] Epoch 567  Loss: 0.1157  L_pred:0.1137  L_time:0.0038    train.py:203
+           Loss:0.1157                                                          
+[05:53:46] Epoch 568  Loss: 0.1149  L_pred:0.1131  L_time:0.0037    train.py:203
+           Loss:0.1149                                                          
+[05:54:39] Epoch 569  Loss: 0.1149  L_pred:0.1130  L_time:0.0037    train.py:203
+           Loss:0.1149                                                          
+[05:55:33] Epoch 570  Loss: 0.1146  L_pred:0.1128  L_time:0.0037    train.py:203
+           Loss:0.1146                                                          
+[05:56:26] Epoch 571  Loss: 0.1149  L_pred:0.1130  L_time:0.0037    train.py:203
+           Loss:0.1149                                                          
+[05:57:20] Epoch 572  Loss: 0.1148  L_pred:0.1129  L_time:0.0038    train.py:203
+           Loss:0.1148                                                          
+[05:58:13] Epoch 573  Loss: 0.1151  L_pred:0.1133  L_time:0.0036    train.py:203
+           Loss:0.1151                                                          
+[05:59:07] Epoch 574  Loss: 0.1152  L_pred:0.1133  L_time:0.0037    train.py:203
+           Loss:0.1152                                                          
+[06:00:01] Epoch 575  Loss: 0.1147  L_pred:0.1128  L_time:0.0037    train.py:203
+           Loss:0.1147                                                          
+Eval Epoch 575 (team) MALE [0.4423883557319641, 0.4154558777809143, 
+0.40755969285964966, 0.42213544249534607, 0.42974916100502014]  RMSLE 
+[0.5116140246391296, 0.5153727531433105, 0.5254549384117126, 0.5454568862915039,
+0.5571898818016052]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch575_ma
+le0_0.4424_male1_0.4155_male2_0.4076_male3_0.4221_male4_0.4297_team.pt
+[06:06:25] Epoch 576  Loss: 0.1139  L_pred:0.1121  L_time:0.0037    train.py:203
+           Loss:0.1139                                                          
+[06:07:19] Epoch 577  Loss: 0.1138  L_pred:0.1119  L_time:0.0037    train.py:203
+           Loss:0.1138                                                          
+[06:08:13] Epoch 578  Loss: 0.1141  L_pred:0.1122  L_time:0.0037    train.py:203
+           Loss:0.1141                                                          
+[06:09:06] Epoch 579  Loss: 0.1140  L_pred:0.1122  L_time:0.0037    train.py:203
+           Loss:0.1140                                                          
+[06:10:00] Epoch 580  Loss: 0.1145  L_pred:0.1127  L_time:0.0036    train.py:203
+           Loss:0.1145                                                          
+[06:10:53] Epoch 581  Loss: 0.1140  L_pred:0.1121  L_time:0.0037    train.py:203
+           Loss:0.1140                                                          
+[06:11:47] Epoch 582  Loss: 0.1139  L_pred:0.1120  L_time:0.0036    train.py:203
+           Loss:0.1139                                                          
+[06:12:41] Epoch 583  Loss: 0.1137  L_pred:0.1119  L_time:0.0037    train.py:203
+           Loss:0.1137                                                          
+[06:13:35] Epoch 584  Loss: 0.1140  L_pred:0.1122  L_time:0.0036    train.py:203
+           Loss:0.1140                                                          
+[06:14:29] Epoch 585  Loss: 0.1139  L_pred:0.1122  L_time:0.0036    train.py:203
+           Loss:0.1139                                                          
+[06:15:23] Epoch 586  Loss: 0.1141  L_pred:0.1122  L_time:0.0037    train.py:203
+           Loss:0.1141                                                          
+[06:16:17] Epoch 587  Loss: 0.1142  L_pred:0.1125  L_time:0.0036    train.py:203
+           Loss:0.1142                                                          
+[06:17:11] Epoch 588  Loss: 0.1139  L_pred:0.1121  L_time:0.0036    train.py:203
+           Loss:0.1139                                                          
+[06:18:04] Epoch 589  Loss: 0.1136  L_pred:0.1118  L_time:0.0036    train.py:203
+           Loss:0.1136                                                          
+[06:18:58] Epoch 590  Loss: 0.1137  L_pred:0.1118  L_time:0.0037    train.py:203
+           Loss:0.1137                                                          
+[06:19:51] Epoch 591  Loss: 0.1132  L_pred:0.1114  L_time:0.0036    train.py:203
+           Loss:0.1132                                                          
+[06:20:45] Epoch 592  Loss: 0.1135  L_pred:0.1117  L_time:0.0035    train.py:203
+           Loss:0.1135                                                          
+[06:21:39] Epoch 593  Loss: 0.1135  L_pred:0.1117  L_time:0.0036    train.py:203
+           Loss:0.1135                                                          
+[06:22:32] Epoch 594  Loss: 0.1134  L_pred:0.1116  L_time:0.0036    train.py:203
+           Loss:0.1134                                                          
+[06:23:26] Epoch 595  Loss: 0.1137  L_pred:0.1119  L_time:0.0036    train.py:203
+           Loss:0.1137                                                          
+[06:24:19] Epoch 596  Loss: 0.1141  L_pred:0.1124  L_time:0.0035    train.py:203
+           Loss:0.1141                                                          
+[06:25:13] Epoch 597  Loss: 0.1150  L_pred:0.1131  L_time:0.0037    train.py:203
+           Loss:0.1150                                                          
+[06:26:07] Epoch 598  Loss: 0.1145  L_pred:0.1127  L_time:0.0035    train.py:203
+           Loss:0.1145                                                          
+[06:27:00] Epoch 599  Loss: 0.1144  L_pred:0.1126  L_time:0.0036    train.py:203
+           Loss:0.1144                                                          
+[06:27:54] Epoch 600  Loss: 0.1142  L_pred:0.1125  L_time:0.0034    train.py:203
+           Loss:0.1142                                                          
+Eval Epoch 600 (team) MALE [0.4467758536338806, 0.4210180342197418, 
+0.4161945581436157, 0.4329736530780792, 0.43890950083732605]  RMSLE 
+[0.5172157883644104, 0.5218435525894165, 0.5349764823913574, 0.5564383864402771,
+0.5664604902267456]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch600_ma
+le0_0.4468_male1_0.4210_male2_0.4162_male3_0.4330_male4_0.4389_team.pt
+[06:34:18] Epoch 601  Loss: 0.1132  L_pred:0.1114  L_time:0.0036    train.py:203
+           Loss:0.1132                                                          
+[06:35:12] Epoch 602  Loss: 0.1129  L_pred:0.1111  L_time:0.0035    train.py:203
+           Loss:0.1129                                                          
+[06:36:05] Epoch 603  Loss: 0.1131  L_pred:0.1113  L_time:0.0035    train.py:203
+           Loss:0.1131                                                          
+[06:36:59] Epoch 604  Loss: 0.1136  L_pred:0.1118  L_time:0.0036    train.py:203
+           Loss:0.1136                                                          
+[06:37:52] Epoch 605  Loss: 0.1141  L_pred:0.1124  L_time:0.0034    train.py:203
+           Loss:0.1141                                                          
+[06:38:46] Epoch 606  Loss: 0.1140  L_pred:0.1122  L_time:0.0036    train.py:203
+           Loss:0.1140                                                          
+[06:39:40] Epoch 607  Loss: 0.1139  L_pred:0.1122  L_time:0.0034    train.py:203
+           Loss:0.1139                                                          
+[06:40:34] Epoch 608  Loss: 0.1136  L_pred:0.1118  L_time:0.0035    train.py:203
+           Loss:0.1136                                                          
+[06:41:27] Epoch 609  Loss: 0.1129  L_pred:0.1112  L_time:0.0034    train.py:203
+           Loss:0.1129                                                          
+[06:42:21] Epoch 610  Loss: 0.1122  L_pred:0.1104  L_time:0.0035    train.py:203
+           Loss:0.1122                                                          
+[06:43:15] Epoch 611  Loss: 0.1128  L_pred:0.1110  L_time:0.0035    train.py:203
+           Loss:0.1128                                                          
+[06:44:09] Epoch 612  Loss: 0.1124  L_pred:0.1107  L_time:0.0034    train.py:203
+           Loss:0.1124                                                          
+[06:45:02] Epoch 613  Loss: 0.1137  L_pred:0.1119  L_time:0.0035    train.py:203
+           Loss:0.1137                                                          
+[06:45:56] Epoch 614  Loss: 0.1144  L_pred:0.1127  L_time:0.0034    train.py:203
+           Loss:0.1144                                                          
+[06:46:50] Epoch 615  Loss: 0.1142  L_pred:0.1125  L_time:0.0035    train.py:203
+           Loss:0.1142                                                          
+[06:47:44] Epoch 616  Loss: 0.1135  L_pred:0.1118  L_time:0.0034    train.py:203
+           Loss:0.1135                                                          
+[06:48:38] Epoch 617  Loss: 0.1132  L_pred:0.1114  L_time:0.0035    train.py:203
+           Loss:0.1132                                                          
+[06:49:31] Epoch 618  Loss: 0.1122  L_pred:0.1105  L_time:0.0034    train.py:203
+           Loss:0.1122                                                          
+[06:50:25] Epoch 619  Loss: 0.1119  L_pred:0.1101  L_time:0.0034    train.py:203
+           Loss:0.1119                                                          
+[06:51:19] Epoch 620  Loss: 0.1121  L_pred:0.1104  L_time:0.0035    train.py:203
+           Loss:0.1121                                                          
+[06:52:13] Epoch 621  Loss: 0.1122  L_pred:0.1105  L_time:0.0034    train.py:203
+           Loss:0.1122                                                          
+[06:53:07] Epoch 622  Loss: 0.1128  L_pred:0.1111  L_time:0.0035    train.py:203
+           Loss:0.1128                                                          
+[06:54:01] Epoch 623  Loss: 0.1119  L_pred:0.1102  L_time:0.0034    train.py:203
+           Loss:0.1119                                                          
+[06:54:54] Epoch 624  Loss: 0.1119  L_pred:0.1102  L_time:0.0034    train.py:203
+           Loss:0.1119                                                          
+[06:55:48] Epoch 625  Loss: 0.1119  L_pred:0.1102  L_time:0.0034    train.py:203
+           Loss:0.1119                                                          
+Eval Epoch 625 (team) MALE [0.4384309649467468, 0.40875300765037537, 
+0.3987884819507599, 0.41169220209121704, 0.4203251004219055]  RMSLE 
+[0.5071448683738708, 0.5080666542053223, 0.516093373298645, 0.534788966178894, 
+0.5472409725189209]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch625_ma
+le0_0.4384_male1_0.4088_male2_0.3988_male3_0.4117_male4_0.4203_team.pt
+[07:02:16] Epoch 626  Loss: 0.1124  L_pred:0.1107  L_time:0.0034    train.py:203
+           Loss:0.1124                                                          
+[07:03:10] Epoch 627  Loss: 0.1121  L_pred:0.1104  L_time:0.0034    train.py:203
+           Loss:0.1121                                                          
+[07:04:04] Epoch 628  Loss: 0.1121  L_pred:0.1104  L_time:0.0034    train.py:203
+           Loss:0.1121                                                          
+[07:04:58] Epoch 629  Loss: 0.1120  L_pred:0.1103  L_time:0.0034    train.py:203
+           Loss:0.1120                                                          
+[07:05:52] Epoch 630  Loss: 0.1119  L_pred:0.1102  L_time:0.0034    train.py:203
+           Loss:0.1119                                                          
+[07:06:45] Epoch 631  Loss: 0.1117  L_pred:0.1099  L_time:0.0034    train.py:203
+           Loss:0.1117                                                          
+[07:07:39] Epoch 632  Loss: 0.1120  L_pred:0.1103  L_time:0.0034    train.py:203
+           Loss:0.1120                                                          
+[07:08:33] Epoch 633  Loss: 0.1122  L_pred:0.1106  L_time:0.0033    train.py:203
+           Loss:0.1122                                                          
+[07:09:26] Epoch 634  Loss: 0.1121  L_pred:0.1104  L_time:0.0034    train.py:203
+           Loss:0.1121                                                          
+[07:10:20] Epoch 635  Loss: 0.1125  L_pred:0.1108  L_time:0.0033    train.py:203
+           Loss:0.1125                                                          
+[07:11:13] Epoch 636  Loss: 0.1120  L_pred:0.1103  L_time:0.0034    train.py:203
+           Loss:0.1120                                                          
+[07:12:07] Epoch 637  Loss: 0.1116  L_pred:0.1100  L_time:0.0033    train.py:203
+           Loss:0.1116                                                          
+[07:13:01] Epoch 638  Loss: 0.1117  L_pred:0.1101  L_time:0.0033    train.py:203
+           Loss:0.1117                                                          
+[07:13:55] Epoch 639  Loss: 0.1119  L_pred:0.1102  L_time:0.0034    train.py:203
+           Loss:0.1119                                                          
+[07:14:48] Epoch 640  Loss: 0.1118  L_pred:0.1101  L_time:0.0033    train.py:203
+           Loss:0.1118                                                          
+[07:15:42] Epoch 641  Loss: 0.1118  L_pred:0.1101  L_time:0.0034    train.py:203
+           Loss:0.1118                                                          
+[07:16:35] Epoch 642  Loss: 0.1115  L_pred:0.1099  L_time:0.0032    train.py:203
+           Loss:0.1115                                                          
+[07:17:29] Epoch 643  Loss: 0.1116  L_pred:0.1100  L_time:0.0033    train.py:203
+           Loss:0.1116                                                          
+[07:18:22] Epoch 644  Loss: 0.1116  L_pred:0.1099  L_time:0.0033    train.py:203
+           Loss:0.1116                                                          
+[07:19:16] Epoch 645  Loss: 0.1114  L_pred:0.1098  L_time:0.0033    train.py:203
+           Loss:0.1114                                                          
+[07:20:09] Epoch 646  Loss: 0.1110  L_pred:0.1093  L_time:0.0033    train.py:203
+           Loss:0.1110                                                          
+[07:21:03] Epoch 647  Loss: 0.1110  L_pred:0.1094  L_time:0.0033    train.py:203
+           Loss:0.1110                                                          
+[07:21:57] Epoch 648  Loss: 0.1114  L_pred:0.1098  L_time:0.0033    train.py:203
+           Loss:0.1114                                                          
+[07:22:51] Epoch 649  Loss: 0.1112  L_pred:0.1095  L_time:0.0033    train.py:203
+           Loss:0.1112                                                          
+[07:23:44] Epoch 650  Loss: 0.1112  L_pred:0.1096  L_time:0.0033    train.py:203
+           Loss:0.1112                                                          
+Eval Epoch 650 (team) MALE [0.4417404234409332, 0.4119759798049927, 
+0.4042291045188904, 0.4193970561027527, 0.426207035779953]  RMSLE 
+[0.511574923992157, 0.5120043754577637, 0.522425651550293, 0.5425668954849243, 
+0.5532051920890808]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch650_ma
+le0_0.4417_male1_0.4120_male2_0.4042_male3_0.4194_male4_0.4262_team.pt
+[07:30:09] Epoch 651  Loss: 0.1108  L_pred:0.1092  L_time:0.0033    train.py:203
+           Loss:0.1108                                                          
+[07:31:02] Epoch 652  Loss: 0.1107  L_pred:0.1090  L_time:0.0033    train.py:203
+           Loss:0.1107                                                          
+[07:31:56] Epoch 653  Loss: 0.1108  L_pred:0.1092  L_time:0.0033    train.py:203
+           Loss:0.1108                                                          
+[07:32:50] Epoch 654  Loss: 0.1107  L_pred:0.1090  L_time:0.0033    train.py:203
+           Loss:0.1107                                                          
+[07:33:43] Epoch 655  Loss: 0.1113  L_pred:0.1096  L_time:0.0033    train.py:203
+           Loss:0.1113                                                          
+[07:34:37] Epoch 656  Loss: 0.1109  L_pred:0.1093  L_time:0.0033    train.py:203
+           Loss:0.1109                                                          
+[07:35:31] Epoch 657  Loss: 0.1108  L_pred:0.1091  L_time:0.0032    train.py:203
+           Loss:0.1108                                                          
+[07:36:24] Epoch 658  Loss: 0.1107  L_pred:0.1091  L_time:0.0033    train.py:203
+           Loss:0.1107                                                          
+[07:37:18] Epoch 659  Loss: 0.1105  L_pred:0.1089  L_time:0.0032    train.py:203
+           Loss:0.1105                                                          
+[07:38:12] Epoch 660  Loss: 0.1107  L_pred:0.1091  L_time:0.0032    train.py:203
+           Loss:0.1107                                                          
+[07:39:05] Epoch 661  Loss: 0.1104  L_pred:0.1088  L_time:0.0032    train.py:203
+           Loss:0.1104                                                          
+[07:39:59] Epoch 662  Loss: 0.1108  L_pred:0.1092  L_time:0.0033    train.py:203
+           Loss:0.1108                                                          
+[07:40:52] Epoch 663  Loss: 0.1111  L_pred:0.1095  L_time:0.0032    train.py:203
+           Loss:0.1111                                                          
+[07:41:46] Epoch 664  Loss: 0.1114  L_pred:0.1098  L_time:0.0032    train.py:203
+           Loss:0.1114                                                          
+[07:42:40] Epoch 665  Loss: 0.1115  L_pred:0.1099  L_time:0.0031    train.py:203
+           Loss:0.1115                                                          
+[07:43:33] Epoch 666  Loss: 0.1120  L_pred:0.1103  L_time:0.0033    train.py:203
+           Loss:0.1120                                                          
+[07:44:27] Epoch 667  Loss: 0.1124  L_pred:0.1109  L_time:0.0030    train.py:203
+           Loss:0.1124                                                          
+[07:45:21] Epoch 668  Loss: 0.1137  L_pred:0.1121  L_time:0.0033    train.py:203
+           Loss:0.1137                                                          
+[07:46:15] Epoch 669  Loss: 0.1158  L_pred:0.1143  L_time:0.0030    train.py:203
+           Loss:0.1158                                                          
+[07:47:09] Epoch 670  Loss: 0.1168  L_pred:0.1151  L_time:0.0033    train.py:203
+           Loss:0.1168                                                          
+[07:48:03] Epoch 671  Loss: 0.1193  L_pred:0.1178  L_time:0.0030    train.py:203
+           Loss:0.1193                                                          
+[07:48:56] Epoch 672  Loss: 0.1160  L_pred:0.1144  L_time:0.0033    train.py:203
+           Loss:0.1160                                                          
+[07:49:50] Epoch 673  Loss: 0.1121  L_pred:0.1106  L_time:0.0031    train.py:203
+           Loss:0.1121                                                          
+[07:50:43] Epoch 674  Loss: 0.1104  L_pred:0.1088  L_time:0.0032    train.py:203
+           Loss:0.1104                                                          
+[07:51:37] Epoch 675  Loss: 0.1125  L_pred:0.1108  L_time:0.0033    train.py:203
+           Loss:0.1125                                                          
+Eval Epoch 675 (team) MALE [0.4271619915962219, 0.39373403787612915, 
+0.3771402835845947, 0.38471731543540955, 0.3954690992832184]  RMSLE 
+[0.4939056932926178, 0.4904692769050598, 0.49191731214523315, 
+0.5065417289733887, 0.5215876698493958]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch675_ma
+le0_0.4272_male1_0.3937_male2_0.3771_male3_0.3847_male4_0.3955_team.pt
+[07:58:06] Epoch 676  Loss: 0.1166  L_pred:0.1150  L_time:0.0031    train.py:203
+           Loss:0.1166                                                          
+[07:58:59] Epoch 677  Loss: 0.1150  L_pred:0.1133  L_time:0.0033    train.py:203
+           Loss:0.1150                                                          
+[07:59:53] Epoch 678  Loss: 0.1119  L_pred:0.1103  L_time:0.0031    train.py:203
+           Loss:0.1119                                                          
+[08:00:47] Epoch 679  Loss: 0.1104  L_pred:0.1089  L_time:0.0032    train.py:203
+           Loss:0.1104                                                          
+[08:01:41] Epoch 680  Loss: 0.1116  L_pred:0.1099  L_time:0.0033    train.py:203
+           Loss:0.1116                                                          
+[08:02:35] Epoch 681  Loss: 0.1124  L_pred:0.1109  L_time:0.0031    train.py:203
+           Loss:0.1124                                                          
+[08:03:29] Epoch 682  Loss: 0.1116  L_pred:0.1099  L_time:0.0033    train.py:203
+           Loss:0.1116                                                          
+[08:04:23] Epoch 683  Loss: 0.1103  L_pred:0.1088  L_time:0.0031    train.py:203
+           Loss:0.1103                                                          
+[08:05:17] Epoch 684  Loss: 0.1103  L_pred:0.1087  L_time:0.0031    train.py:203
+           Loss:0.1103                                                          
+[08:06:11] Epoch 685  Loss: 0.1101  L_pred:0.1086  L_time:0.0032    train.py:203
+           Loss:0.1101                                                          
+[08:07:04] Epoch 686  Loss: 0.1111  L_pred:0.1096  L_time:0.0031    train.py:203
+           Loss:0.1111                                                          
+[08:07:58] Epoch 687  Loss: 0.1102  L_pred:0.1086  L_time:0.0032    train.py:203
+           Loss:0.1102                                                          
+[08:08:52] Epoch 688  Loss: 0.1104  L_pred:0.1089  L_time:0.0031    train.py:203
+           Loss:0.1104                                                          
+[08:09:46] Epoch 689  Loss: 0.1099  L_pred:0.1083  L_time:0.0031    train.py:203
+           Loss:0.1099                                                          
+[08:10:39] Epoch 690  Loss: 0.1099  L_pred:0.1084  L_time:0.0031    train.py:203
+           Loss:0.1099                                                          
+[08:11:33] Epoch 691  Loss: 0.1096  L_pred:0.1080  L_time:0.0031    train.py:203
+           Loss:0.1096                                                          
+[08:12:27] Epoch 692  Loss: 0.1103  L_pred:0.1087  L_time:0.0032    train.py:203
+           Loss:0.1103                                                          
+[08:13:20] Epoch 693  Loss: 0.1100  L_pred:0.1085  L_time:0.0031    train.py:203
+           Loss:0.1100                                                          
+[08:14:14] Epoch 694  Loss: 0.1100  L_pred:0.1085  L_time:0.0031    train.py:203
+           Loss:0.1100                                                          
+[08:15:08] Epoch 695  Loss: 0.1094  L_pred:0.1079  L_time:0.0031    train.py:203
+           Loss:0.1094                                                          
+[08:16:01] Epoch 696  Loss: 0.1098  L_pred:0.1083  L_time:0.0031    train.py:203
+           Loss:0.1098                                                          
+[08:16:55] Epoch 697  Loss: 0.1097  L_pred:0.1082  L_time:0.0031    train.py:203
+           Loss:0.1097                                                          
+[08:17:48] Epoch 698  Loss: 0.1095  L_pred:0.1079  L_time:0.0031    train.py:203
+           Loss:0.1095                                                          
+[08:18:42] Epoch 699  Loss: 0.1093  L_pred:0.1078  L_time:0.0031    train.py:203
+           Loss:0.1093                                                          
+[08:19:35] Epoch 700  Loss: 0.1095  L_pred:0.1079  L_time:0.0031    train.py:203
+           Loss:0.1095                                                          
+Eval Epoch 700 (team) MALE [0.4397776126861572, 0.408841609954834, 
+0.399053692817688, 0.41336268186569214, 0.42015814781188965]  RMSLE 
+[0.5090330243110657, 0.508845329284668, 0.5175456404685974, 0.5366220474243164, 
+0.5471850037574768]
+Evaluated model checkpoint saved: 
+runs/20250507_211147_team_resumedFrom_evaluated_model_epoch090_male0_0.4429_male
+1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team/evaluated_model_epoch700_ma
+le0_0.4398_male1_0.4088_male2_0.3991_male3_0.4134_male4_0.4202_team.pt
+[08:26:01] Epoch 701  Loss: 0.1094  L_pred:0.1079  L_time:0.0030    train.py:203
+           Loss:0.1094                                                          
+[08:26:55] Epoch 702  Loss: 0.1094  L_pred:0.1078  L_time:0.0031    train.py:203
+           Loss:0.1094                                                          
+[08:27:49] Epoch 703  Loss: 0.1098  L_pred:0.1083  L_time:0.0030    train.py:203
+           Loss:0.1098                                                          
+[08:28:43] Epoch 704  Loss: 0.1094  L_pred:0.1079  L_time:0.0030    train.py:203
+           Loss:0.1094                                                          
+[08:29:37] Epoch 705  Loss: 0.1094  L_pred:0.1078  L_time:0.0031    train.py:203
+           Loss:0.1094                                                          
+[08:30:31] Epoch 706  Loss: 0.1095  L_pred:0.1080  L_time:0.0030    train.py:203
+           Loss:0.1095                                                          

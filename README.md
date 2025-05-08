@@ -125,14 +125,14 @@ python train.py \
 
 ```bash
 python train.py \
-  --train_years 2005 2015 \
+  --train_years 2006 2015 \
   --test_years 2016 2019 \
   --hidden_dim 64 \
   --epochs 800 \
   --cold_start_prob 0.5 \
   --beta 0.5 \
   --eval_mode team \
-  --device cuda:0 \
+  --device cuda:3 \
   --load_checkpoint runs/20250507_181011_team_resumedFrom_evaluated_model_epoch020_male0_0.3730_male1_0.6771_male2_0.7959_male3_0.8540_male4_0.8855_team/evaluated_model_epoch090_male0_0.4429_male1_0.6081_male2_0.6199_male3_0.5991_male4_0.5767_team.pt
 ```
 
@@ -178,15 +178,14 @@ python baseline_train.py \
 
 | Model | MALE-Y1 ↓ | MALE-Y2 ↓ | MALE-Y3 ↓ | MALE-Y4 ↓ | MALE-Y5 ↓ | MALE-Avg ↓ | RMSLE-Y1 ↓ | RMSLE-Y2 ↓ | RMSLE-Y3 ↓ | RMSLE-Y4 ↓ | RMSLE-Y5 ↓ | RMSLE-Avg ↓ |
 |-------|:--------:|:--------:|:--------:|:--------:|:--------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:----------:|
-| GBM baseline | 0.198 | 0.282 | 0.321 | 0.326 | 0.338 | 0.293 | 0.325 | 0.452 | 0.503 | 0.521 | 0.539 | 0.468 |
-| (training) R-GCN + Imputer + GRU | 0.438 | 0.513 | 0.529 | 0.543 | 0.543 | 0.513 | 0.527 | 0.625 | 0.653 | 0.678 | 0.687 | 0.634 |
-
+| GBM baseline | **0.198** | **0.282** | **0.321** | **0.326** | **0.338** | **0.293** | **0.325** | **0.452** | 0.503 | 0.521 | 0.539 | 0.468 |
+| R-GCN + Imputer + GRU (new) | 0.427 | 0.394 | 0.377 | 0.385 | 0.395 | 0.396 | 0.494 | 0.490 | **0.492** | **0.507** | **0.522** | 0.501 |
 **Notes:**
 - Lower values are better for all metrics (↓)
 - MALE = Mean Absolute Logarithmic Error
 - RMSLE = Root Mean Square Logarithmic Error
 - Y1-Y5 = prediction years 1 through 5
-- R-GCN results from epoch 150 (team mode)
+- R-GCN results from epoch 675 (team mode)
 
 
 ---
