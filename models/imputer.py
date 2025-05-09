@@ -77,6 +77,7 @@ class WeightedImputer(nn.Module):
         -------
         Tensor [hidden_dim] – imputed embedding v_{p, year_idx}
         """
+        # data['paper'].y_year can get the publication year of the paper, we only need the papers published in year t.
         data = snapshots[year_idx]
         embs = embeddings[year_idx]
         device = embs['paper'].device
@@ -85,7 +86,9 @@ class WeightedImputer(nn.Module):
         if predefined_neigh is not None:
             neighbours = predefined_neigh
         else:
-            neighbours = self.collect_neighbours(data, paper_id, device)
+            raise ValueError(
+                "predefined_neigh must be provided for imputation in earlier years"
+            )
 
         # ----- nothing to aggregate --------------------------------------
         if not neighbours:

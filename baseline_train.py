@@ -19,9 +19,9 @@ console = Console()
 
 
 # ---------------------------------------------------------------------------
-def build_dataset(snapshots, year_indices):
+def build_dataset(snapshots, year_indices, years_all):      # ← extra arg
     """
-    Generates one (X, y) pair for *every* paper that appears in the years
+    Generates one (X, y) pair for every paper *published in the calendar year*
     designated by `year_indices`.
 
     X  : [N, 513]      256 topic emb + 256 mean-author emb + 1 (#authors)
@@ -30,45 +30,52 @@ def build_dataset(snapshots, year_indices):
     feats, labels = [], []
 
     for t in year_indices:
-        g_now  = snapshots[t]
-        g_prev = snapshots[t - 1] if t - 1 >= 0 else None
+        g_now       = snapshots[t]
+        g_prev      = snapshots[t - 1] if t - 1 >= 0 else None
+        curr_year   = years_all[t]                      # ← true calendar year
 
-        topic_now   = g_now["paper"].x_title_emb.cpu()        # [P, 256]
-        y_citations = g_now["paper"].y_citations.cpu().float()# [P, 5]
+        # ----------- pick only the papers published *this* year -----------
+        mask = (g_now["paper"].y_year == curr_year).cpu()
+        if mask.sum() == 0:                 # no new papers in this snapshot
+            continue
 
-        # author→paper incidence for year t
+        paper_ids    = mask.nonzero(as_tuple=False).view(-1)
+        topic_now    = g_now["paper"].x_title_emb[paper_ids].cpu()     # [P,256]
+        y_citations  = g_now["paper"].y_citations [paper_ids].cpu().float() # [P,5]
+
+        # author→paper incidence in the current year
         src, dst = g_now["author", "writes", "paper"].edge_index.cpu()
 
-        # build a list of author indices for every paper
-        paper2authors = [[] for _ in range(topic_now.size(0))]
+        # build a list of author indices for every *selected* paper
+        pid_to_local = {int(pid): i for i, pid in enumerate(paper_ids)}
+        paper2authors = [[] for _ in range(len(paper_ids))]
         for a, p in zip(src.tolist(), dst.tolist()):
-            paper2authors[p].append(a)
+            if p in pid_to_local:                         # ignore other years’ papers
+                paper2authors[pid_to_local[p]].append(a)
 
-        # author embeddings from *previous* year
-        if g_prev is not None and "author" in g_prev.node_types:
-            auth_emb_prev = g_prev["author"].x.cpu()          # [Aprev, 256]
-        else:
-            auth_emb_prev = None                              # will fallback to zeros
+        # author embeddings from the previous year (safe – no look-ahead)
+        auth_emb_prev = (g_prev["author"].x.cpu()
+                         if g_prev is not None and "author" in g_prev.node_types
+                         else None)
 
-        for pid in range(topic_now.size(0)):
-            topic_vec = topic_now[pid]
+        # --------------------------- build feature rows -------------------
+        for idx_local, pid in enumerate(paper_ids):
+            topic_vec = topic_now[idx_local]
 
-            auth_ids = paper2authors[pid]
+            auth_ids = paper2authors[idx_local]
             if auth_ids and auth_emb_prev is not None:
                 valid_ids = [aid for aid in auth_ids
                              if aid < auth_emb_prev.size(0)]
-                if valid_ids:
-                    mean_auth = auth_emb_prev[valid_ids].mean(0)
-                else:
-                    mean_auth = torch.zeros(256)
+                mean_auth = (auth_emb_prev[valid_ids].mean(0)
+                             if valid_ids else torch.zeros(256))
             else:
                 mean_auth = torch.zeros(256)
 
             num_auth = torch.tensor([len(auth_ids)], dtype=torch.float32)
-
             x = torch.cat([topic_vec, mean_auth, num_auth])   # 513-dim
-            feats.append(x.numpy())
-            labels.append(y_citations[pid].numpy())
+
+            feats .append(x.numpy())
+            labels.append(y_citations[idx_local].numpy())
 
     X = np.asarray(feats,  dtype=np.float32)
     y = np.asarray(labels, dtype=np.float32)
@@ -120,9 +127,10 @@ def main():
 
     # 3) dataset -----------------------------------------------------------
     console.print("Building training set …")
-    X_train, y_train = build_dataset(snapshots, train_indices)
+    X_train, y_train = build_dataset(snapshots, train_indices, years_all)   # ← add years_all
     console.print("Building   test   set …")
-    X_test , y_test  = build_dataset(snapshots, test_indices)
+    X_test , y_test  = build_dataset(snapshots, test_indices , years_all)   # ← add years_all
+
 
     console.print(f"Train samples: {X_train.shape[0]:,}")
     console.print(f"Test  samples: {X_test.shape [0]:,}")

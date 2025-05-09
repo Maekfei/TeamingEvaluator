@@ -41,11 +41,12 @@ class ImpactModel(nn.Module):
         self.eps = 1.0                    # +1 for zero-citation papers
 
     # -----------------------------------------------------------------
-    def forward(self, snapshots, years_train):
+    def forward(self, snapshots, years_train, start_year):
         """
         Train forward pass iterating over years in years_train.
         snapshots : list[HeteroData] aligned with chronological order.
         years_train: iterable of indices (ints)
+        start_year : int, first year in the training set.
         Returns:
             loss  (scalar)
             log   (dict for printing)
@@ -58,7 +59,6 @@ class ImpactModel(nn.Module):
         embeddings = []
         for data in snapshots: # need multiple years for the imputer
             embeddings.append(self.encoder(data))
-
         # -------- temporal smoothing regulariser -------------------- # make sure the same papers, authors, venues are not too different in the two consecutive years
         train_idxs = set(years_train)
         l_time = []
@@ -66,11 +66,11 @@ class ImpactModel(nn.Module):
 
         for ntype in node_types_to_regularize:
             l_time_ntype = []
-            for t in years_train:                  # <── changed
-                if (t + 1) not in train_idxs:      # only pairs wholly in train
+            for t in years_train:            
+                if (t - 1) not in train_idxs:   
                     continue
                 emb_t = embeddings[t]    [ntype]
-                emb_tp1 = embeddings[t+1][ntype]
+                emb_tp1 = embeddings[t-1][ntype].detach()  # ← detach: no grad to past, so there will be no data leakage.
 
                 common = torch.arange(
                     min(emb_t.size(0), emb_tp1.size(0)),
@@ -89,16 +89,22 @@ class ImpactModel(nn.Module):
         l_pred = []
         for t in years_train: # year t.
             data = snapshots[t]
-            y_true = data['paper'].y_citations.to(device).float()  # [N, L]
-            topic_all = embeddings[t]['paper']
-            N, _ = y_true.shape
+            year_actual = start_year + t
+            mask = (data['paper'].y_year == year_actual).to(device)
+            if mask.sum() == 0:           # nothing to train / evaluate for that year
+                continue
+
+            paper_ids = mask.nonzero(as_tuple=False).view(-1)
+            y_true    = data['paper'].y_citations[paper_ids].float()
+            topic_all = embeddings[t]['paper'][paper_ids]
+            N = y_true.size(0)
 
             # ----------------------------------------------------------
             # 3.1 cache neighbours of every paper in its publication yr
             # ----------------------------------------------------------
             neigh_cache = [
-                self.imputer.collect_neighbours(data, pid, device)
-                for pid in range(N)
+                self.imputer.collect_neighbours(data, int(pid), device)
+                for pid in paper_ids
             ]
 
             # -------- cold-start augmentation --------------------------
@@ -116,25 +122,29 @@ class ImpactModel(nn.Module):
             for k in range(self.history): # k = 0 … 4
                 if k == 0:
                     # step-0  : the current year, topic only  (no neighbours ⇒ no leakage)
-                    seq_k = topic_all                                 # [N,H]
+                    seq_k = topic_all                             # [N,H]
                 else:
                     yr = t - k                                        # t-1 … t- 4
                     if yr < 0:                                        # before data starts
                         seq_k = torch.zeros(N, self.hidden_dim, device=device)
                     else:
-                        seq_k = torch.stack(
-                            [ self.imputer(pid, yr, snapshots, embeddings,
-                                            predefined_neigh=neigh_cache[pid],
-                                            topic_vec=topic_all[pid])   # blend topic
-                              for pid in range(N) ],
-                            dim=0,
-                        )                                             # [N,H]
+                        seq_k = torch.stack([
+                                            self.imputer(
+                                                None,                        # paper_id not needed
+                                                yr,
+                                                snapshots,
+                                                embeddings,
+                                                predefined_neigh = neigh_cache[i],
+                                                topic_vec        = topic_all[i]
+                                            )
+                                            for i in range(N)
+                                        ], dim=0)                                            # [N,H]
                 seq_steps.append(seq_k) # seq_k is a tensor of shape [N,H], from year t back to year t -4, from now to 4 years ago
             seq_steps = seq_steps[::-1]
             V_p = torch.stack(seq_steps, dim=1)    # [N,5,H]
 
             # 3.3 generate citation distribution -----------------------
-            eta, mu, sigma = self.generator(V_p)
+            eta, mu, sigma = self.generator(V_p) 
             y_hat_cum = self.generator.predict_cumulative(
                 self.horizons.to(device), eta, mu, sigma
             )                                           # [N, L]
@@ -159,7 +169,7 @@ class ImpactModel(nn.Module):
 
     # -----------------------------------------------------------------
     @torch.no_grad()
-    def evaluate(self, snapshots, years_test):
+    def evaluate(self, snapshots, years_test, start_year):
         """
         Standard evaluation (real papers, full neighbourhood).
         Uses the *same* sequence construction as in training – one true
@@ -174,18 +184,23 @@ class ImpactModel(nn.Module):
         males, rmsles = [], []
         for t in years_test:
             data      = snapshots[t]
-            y_true    = data['paper'].y_citations.to(device).float()   # [N,5]
-            topic_all = embeddings[t]['paper']                         # [N,H]
-            N, _      = y_true.shape
+            year_actual = start_year + t
+            mask = (data['paper'].y_year == year_actual).to(device)
+            if mask.sum() == 0:           # nothing to train / evaluate for that year
+                continue
 
-            # 2) cache neighbours of each paper in its publication year
+            paper_ids = mask.nonzero(as_tuple=False).view(-1)
+            y_true    = data['paper'].y_citations[paper_ids].float()
+            topic_all = embeddings[t]['paper'][paper_ids]
+            N = y_true.size(0)
+
             neigh_cache = [
-                self.imputer.collect_neighbours(data, pid, device)
-                for pid in range(N)
+                self.imputer.collect_neighbours(data, int(pid), device)
+                for pid in paper_ids
             ]
 
             # 3) build 5-step sequence  (k = 0 … 4)
-            seq_steps = []
+            seq_steps = [] # below also need updates.
             for k in range(self.history):
                 if k == 0:                             # publication day
                     seq_k = topic_all                  # [N,H]
@@ -194,13 +209,17 @@ class ImpactModel(nn.Module):
                     if yr < 0:                         # before data starts
                         seq_k = torch.zeros(N, self.hidden_dim, device=device)
                     else:
-                        seq_k = torch.stack(
-                            [ self.imputer(pid, yr, snapshots, embeddings,
-                                            predefined_neigh = neigh_cache[pid],
-                                            topic_vec        = topic_all[pid])
-                              for pid in range(N) ],
-                            dim=0,
-                        )                              # [N,H]
+                        seq_k = torch.stack([
+                                            self.imputer(
+                                                None,                        # paper_id not needed
+                                                yr,
+                                                snapshots,
+                                                embeddings,
+                                                predefined_neigh = neigh_cache[i],
+                                                topic_vec        = topic_all[i]
+                                            )
+                                            for i in range(N)
+                                        ], dim=0)                               # [N,H]
                 seq_steps.append(seq_k)
             seq_steps = seq_steps[::-1]
             V_p = torch.stack(seq_steps, dim=1)        # [N,5,H]
@@ -225,7 +244,8 @@ class ImpactModel(nn.Module):
                      author_ids: list[str],
                      topic_vec: torch.Tensor,
                      snapshots: list,
-                     current_year_idx: int):
+                     current_year_idx: int,
+                     start_year):
 
         device    = next(self.parameters()).device
         topic_vec = topic_vec.to(device)
@@ -266,10 +286,10 @@ class ImpactModel(nn.Module):
 
     # -----------------------------------------------------------------
     @torch.no_grad()
-    def evaluate_team(self, snapshots, years_test):
+    def evaluate_team(self, snapshots, years_test, start_year):
         """
         Evaluate in the counter-factual setting:
-        use only authors + topic of each core paper in test years.
+        use only authors + topic of each paper in test years.
         """
         device    = next(self.parameters()).device
         horizons  = self.horizons.to(device)
@@ -279,30 +299,33 @@ class ImpactModel(nn.Module):
         males, rmsles = [], []
         for t in years_test:
             data = snapshots[t]
-            core_mask = data['paper'].is_core.to(device)
-            if core_mask.sum() == 0:
+            year_actual = start_year + t
+            mask = (data['paper'].y_year == year_actual).to(device)
+            if mask.sum() == 0:           # nothing to train / evaluate for that year
                 continue
 
-            y_true = data['paper'].y_citations[core_mask].float()     # [M,5]
-            topic  = encs[t]['paper'][core_mask]                      # [M,H]
+            paper_ids = mask.nonzero(as_tuple=False).view(-1)
+            y_true    = data['paper'].y_citations[paper_ids].float()
+            topic_all = encs[t]['paper'][paper_ids]
+            N = y_true.size(0)
 
-            # author neighbour indices for each core paper ------------
-            neigh = [
-                self.imputer.collect_neighbours(data, pid, device)
-                for pid in core_mask.nonzero(as_tuple=False).view(-1)
+
+            neigh_cache = [
+                self.imputer.collect_neighbours(data, int(pid), device)
+                for pid in paper_ids
             ]
-            for d in neigh:
+            for d in neigh_cache:
                 d.pop('venue',  None)
                 d.pop('paper',  None)   # keep only authors
 
             preds = []
-            for i, d in enumerate(neigh):
+            for i, d in enumerate(neigh_cache):
                 a_local = d.get('author', torch.empty(0, device=device, dtype=torch.long))
                 if a_local.numel() == 0:
                     preds.append(torch.zeros(5, device=device))
                     continue
                 au_raw = [ self.idx2aut[int(j)] for j in a_local ]
-                p = self.predict_team(au_raw, topic[i], snapshots, t)
+                p = self.predict_team(au_raw, topic_all[i], snapshots, t, start_year)
                 preds.append(p)
             y_hat = torch.stack(preds, 0)
 

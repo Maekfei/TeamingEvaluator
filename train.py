@@ -119,14 +119,14 @@ def main():
             "paper":  snapshots[0]["paper"].x_title_emb.size(-1),
             "venue":  snapshots[0]["venue"].x.size(-1),
         }
-
         model = ImpactModel(metadata,
                             in_dims,
                             hidden_dim=args.hidden_dim,
                             beta=args.beta,
                             cold_start_prob=args.cold_start_prob,
                             aut2idx=AUT2IDX,
-                            idx2aut=idx2aut).to(args.device)
+                            idx2aut=idx2aut
+                            ).to(args.device)
         optimizer = Adam(model.parameters(), lr=args.lr)
 
         start_epoch = 1
@@ -195,7 +195,8 @@ def main():
             console.save_text(log_file_path, clear=False)
             model.train()
             optimizer.zero_grad()
-            loss, log = model(snapshots, list(range(len(train_years))))
+            # for the forward pass, we need to pass the snapshots for the training years, not only the idx, but the specific year, so add the first specific year as one element
+            loss, log = model(snapshots, list(range(len(train_years))), train_years[0])
             loss.backward()
             optimizer.step()
 
@@ -211,12 +212,14 @@ def main():
                     if args.eval_mode == "paper":
                         male, rmsle = model.evaluate(
                             snapshots,
-                            list(range(len(train_years), len(train_years)+len(test_years)))
+                            list(range(len(train_years), len(train_years)+len(test_years))),
+                            start_year=train_years[0]
                         )
                     else:  # counter-factual
                         male, rmsle = model.evaluate_team(
                             snapshots,
-                            list(range(len(train_years), len(train_years)+len(test_years)))
+                            list(range(len(train_years), len(train_years)+len(test_years))),
+                            start_year=train_years[0]
                         )
                     
                     current_male_values = male.tolist() if hasattr(male, 'tolist') else male

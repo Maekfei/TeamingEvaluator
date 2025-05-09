@@ -96,8 +96,16 @@ def build_snapshot(up_to_year: int,
     num_papers = sum(1 for v in paper_json.values()
                      if v['features']['PubYear'] <= up_to_year and
                         v['features']['is_core'] == 1) # important, only choose around ~ 9k papers
-    num_authors_est = len(AUT2IDX)       # upper bound
-    num_venues      = len(VEN2IDX)
+    # only choose the authors that are authors of core papers and published <= up_to_year
+    num_authors_est = sum(1 for v in paper_json.values()
+                     if v['features']['PubYear'] <= up_to_year and
+                        v['features']['is_core'] == 1
+                        for a in v['neighbors']['author']) # not used yet
+    # only choose the venues that are venues of core papers published <= up_to_year
+    num_venues = sum(1 for v in paper_json.values()
+                     if v['features']['PubYear'] <= up_to_year and
+                        v['features']['is_core'] == 1
+                        for a in v['features']['Venue']) # not used yet
 
     data = HeteroData()
 
@@ -106,6 +114,8 @@ def build_snapshot(up_to_year: int,
     x_paper  = torch.zeros(num_papers, EMB_DIM, dtype=torch.float32)
     y_cit    = torch.zeros(num_papers, L,        dtype=torch.long)
     is_core  = torch.zeros(num_papers,           dtype=torch.bool)
+    # add one paper feature: the year of publication, the value set as v['features']['PubYear']
+    y_year   = torch.zeros(num_papers,           dtype=torch.long)
 
     paper_idx_of = {}        # PubMed ID  → local index
     for pid, node in paper_json.items():
@@ -129,10 +139,13 @@ def build_snapshot(up_to_year: int,
         # core flag
         if node['features']['is_core'] == 1:
             is_core[p_idx] = True
+        # year of publication
+        y_year[p_idx] = year
 
     data['paper'].x_title_emb   = x_paper
     data['paper'].y_citations   = y_cit
     data['paper'].is_core       = is_core       # ← used inside loss fn
+    data['paper'].y_year       = y_year       # ← used inside loss fn
 
     # ---------------------------------------------------------------
     # Author / venue embeddings (pre-computed JSON files)
@@ -144,9 +157,10 @@ def build_snapshot(up_to_year: int,
                              f'venue_embedding_{up_to_year}.json')
 
     # ----------------------------------------------------------------
-    # 1) tensors initialised with zeros  (unknown ids keep zero vector)
+    # 1) tensors initialised with zeros, only keep num_authors_est and num_venues
+    #    (the rest will be ignored)
     # ----------------------------------------------------------------
-    x_author = torch.zeros(len(AUT2IDX),  EMB_DIM, dtype=torch.float32)
+    x_author = torch.zeros(len(AUT2IDX), EMB_DIM, dtype=torch.float32)
     x_venue  = torch.zeros(len(VEN2IDX),  EMB_DIM, dtype=torch.float32)
 
     # helper to copy a Python list -> torch row
