@@ -176,16 +176,18 @@ python baseline_train.py \
 
 ## 8  Results
 
+SPECTER 2 Embeddings.
+
 | Model | MALE-Y1 ↓ | MALE-Y2 ↓ | MALE-Y3 ↓ | MALE-Y4 ↓ | MALE-Y5 ↓ | MALE-Avg ↓ | RMSLE-Y1 ↓ | RMSLE-Y2 ↓ | RMSLE-Y3 ↓ | RMSLE-Y4 ↓ | RMSLE-Y5 ↓ | RMSLE-Avg ↓ |
 |-------|:--------:|:--------:|:--------:|:--------:|:--------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:----------:|
 | GBM baseline | **0.450** | 0.655 | 0.700 | 0.725 | 0.743 | 0.655 | 0.590 | 0.839 | 0.887 | 0.933 | 0.956 | 0.841 |
- | ours | 0.452 | 0.558 | 0.602 | 0.614 | 0.621 | 0.570 | 0.545 | 0.697 | 0.761 | 0.787 | 0.800 | 0.718 |
+ | ours | 0.424 | **0.562** | **0.601** | **0.604** | **0.606** | **0.560** | **0.523** | **0.698** | **0.755** | **0.780** | **0.796** | **0.710** |
 **Notes:**
 - Lower values are better for all metrics (↓)
 - MALE = Mean Absolute Logarithmic Error
 - RMSLE = Root Mean Square Logarithmic Error
 - Y1-Y5 = prediction years 1 through 5
-- R-GCN results from epoch 180 (team mode).
+- R-GCN results from epoch 120 (team mode). 22 min training time.
 
 
 ---
