@@ -178,14 +178,14 @@ python baseline_train.py \
 
 | Model | MALE-Y1 ↓ | MALE-Y2 ↓ | MALE-Y3 ↓ | MALE-Y4 ↓ | MALE-Y5 ↓ | MALE-Avg ↓ | RMSLE-Y1 ↓ | RMSLE-Y2 ↓ | RMSLE-Y3 ↓ | RMSLE-Y4 ↓ | RMSLE-Y5 ↓ | RMSLE-Avg ↓ |
 |-------|:--------:|:--------:|:--------:|:--------:|:--------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:----------:|
-| GBM baseline | **0.454** | 0.649 | 0.725 | 0.758 |  0.766 | 670 | 0.615 | 0.829 | 0.923 | 0.983 | 0.981 | 0.866 |
-| R-GCN + Imputer + GRU | 0.479 | **0.591** | **0.606** | **0.606** | **0.605** | **0.577** | **0.559** | **0.723** | **0.761** | **0.781** | **0.798** | **0.724** |
+| GBM baseline | **0.450** | 0.655 | 0.700 | 0.725 | 0.743 | 0.655 | 0.590 | 0.839 | 0.887 | 0.933 | 0.956 | 0.841 |
+ | ours | 0.452 | 0.558 | 0.602 | 0.614 | 0.621 | 0.570 | 0.545 | 0.697 | 0.761 | 0.787 | 0.800 | 0.718 |
 **Notes:**
 - Lower values are better for all metrics (↓)
 - MALE = Mean Absolute Logarithmic Error
 - RMSLE = Root Mean Square Logarithmic Error
 - Y1-Y5 = prediction years 1 through 5
-- R-GCN results from epoch 175 (team mode).
+- R-GCN results from epoch 180 (team mode).
 
 
 ---
