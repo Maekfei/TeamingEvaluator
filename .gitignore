@@ -6,6 +6,7 @@ __pycache__/
 data_examine/
 data/yearly_snapshots
 data/raw
+data
 runs
 
 # C extensions

@@ -239,49 +239,76 @@ class ImpactModel(nn.Module):
         return male.cpu(), rmsle.cpu()
 
     # -----------------------------------------------------------------
+    # -----------------------------------------------------------------
     @torch.no_grad()
-    def predict_team(self,
-                     author_ids: list[str],
-                     topic_vec: torch.Tensor,
-                     snapshots: list,
-                     current_year_idx: int,
-                     start_year):
+    def predict_team(
+        self,
+        author_ids: list[str],
+        topic_vec: torch.Tensor,
+        snapshots: list,
+        current_year_idx: int,
+    ):
+        """
+        Counter-factual prediction that is conditioned on the topic vector
+        plus the embeddings of the *same* authors in the previous years.
 
+        author_ids        : list of raw author IDs (strings)
+        topic_vec         : H-dim tensor of the paper topic
+        snapshots         : list[HeteroData]  (all yearly graphs)
+        current_year_idx  : index of the snapshot in which the paper occurs
+        """
         device    = next(self.parameters()).device
         topic_vec = topic_vec.to(device)
 
-        # translate raw author IDs to integer indices
-        au_idx = torch.tensor(
-            [self.aut2idx[a] for a in author_ids if a in self.aut2idx],
-            device=device, dtype=torch.long
-        )
-        if au_idx.numel() == 0:
-            raise ValueError("None of the given author IDs appears in the graph")
+        # ------------- helper to translate raw ids to row indices -----
+        idx_cache: dict[int, torch.Tensor] = {}   # year -> LongTensor indices
 
-        seq = []
-        # iterate from 4-years-ago … to … current year
+        def _author_indices(year: int) -> torch.Tensor:
+            """return LongTensor with valid row indices for <year> snapshot"""
+            if year in idx_cache:
+                return idx_cache[year]            # cached
+
+            raw_ids = snapshots[year]['author'].raw_ids      # list[str]
+            raw2row = {aid: i for i, aid in enumerate(raw_ids)}
+
+            rows = [raw2row[a] for a in author_ids if a in raw2row]
+            if len(rows) == 0:
+                out = torch.empty(0, dtype=torch.long, device=device)
+            else:
+                out = torch.tensor(rows, dtype=torch.long, device=device)
+
+            idx_cache[year] = out
+            return out
+        # --------------------------------------------------------------
+
+        seq = []          # will hold 5 tensors (oldest → newest)
         for offset in range(self.history - 1, -1, -1):
-            yr = current_year_idx - offset       # real calendar year idx
+            yr = current_year_idx - offset
 
-            # ---------- build author embedding (if NOT the current step) --
-            if offset == 0:                      # current year ⇒ NO authors
+            if offset == 0:                      # publication year
                 auth_emb = torch.zeros(self.hidden_dim, device=device)
-            elif yr >= 0:
-                emb_dict = self.encoder(snapshots[yr])
-                auth_emb = emb_dict['author'][au_idx].mean(0)
-            else:                                # before data starts
+
+            elif yr >= 0:                        # one of the past 4 yrs
+                ids = _author_indices(yr)
+                if ids.numel() == 0:
+                    auth_emb = torch.zeros(self.hidden_dim, device=device)
+                else:
+                    enc_dict = self.encoder(snapshots[yr])
+                    auth_emb = enc_dict['author'][ids].mean(0)
+
+            else:                                # before the first snapshot
                 auth_emb = torch.zeros(self.hidden_dim, device=device)
 
             v_k = ( self.imputer.w['author'] * auth_emb +
                     self.imputer.w['self']   * topic_vec )
             seq.append(v_k)
 
-        V_p  = torch.stack(seq, 0).unsqueeze(0)       # [1,5,H]  (oldest→new)
+        V_p  = torch.stack(seq, 0).unsqueeze(0)        # [1,5,H]
         eta, mu, sigma = self.generator(V_p)
         cum = self.generator.predict_cumulative(
-                  self.horizons.to(device), eta, mu, sigma)     # [1,5]
+                  self.horizons.to(device), eta, mu, sigma)    # [1,5]
         yearly = torch.cat([cum[:, :1], cum[:,1:] - cum[:,:-1]], 1)
-        return yearly.squeeze(0)                                 # [5]
+        return yearly.squeeze(0)                               # [5]
 
 
     # -----------------------------------------------------------------
@@ -325,7 +352,7 @@ class ImpactModel(nn.Module):
                     preds.append(torch.zeros(5, device=device))
                     continue
                 au_raw = [ self.idx2aut[int(j)] for j in a_local ]
-                p = self.predict_team(au_raw, topic_all[i], snapshots, t, start_year)
+                p = self.predict_team(au_raw, topic_all[i], snapshots, t)
                 preds.append(p)
             y_hat = torch.stack(preds, 0)
 
@@ -335,3 +362,81 @@ class ImpactModel(nn.Module):
         male  = torch.stack(males ).mean(0)
         rmsle = torch.stack(rmsles).mean(0)
         return male.cpu(), rmsle.cpu()
+    
+    # -----------------------------------------------------------------
+    @torch.no_grad()
+    def predict_teams(
+        self,
+        teams: list[tuple[list[str], torch.Tensor]],
+        snapshots: list,
+        current_year_idx: int,
+    ) -> torch.Tensor:
+        """
+        Vectorised counter-factual inference for many teams.
+
+        Parameters
+        ----------
+        teams            : list of (author_id_list, topic_vec) tuples
+                           • author_id_list  –  raw author ids (strings)
+                           • topic_vec       –  torch.FloatTensor [H]
+        snapshots        : list of yearly HeteroData graphs
+        current_year_idx : index of the snapshot that contains the topic
+                           vectors (= "today")
+
+        Returns
+        -------
+        Tensor  [N, 5]  – yearly citation predictions for every team
+        """
+        device  = next(self.parameters()).device
+        H       = self.hidden_dim
+        N       = len(teams)
+        history = self.history
+
+        # --------------------------------------------------------------
+        # helper : translate  raw-author-ids  →  row indices *per year*
+        # --------------------------------------------------------------
+        raw2row_cache: dict[int, dict[str, int]] = {}   # year → {raw:row}
+
+        def _rows_of(year: int, author_ids: list[str]) -> torch.LongTensor:
+            if year not in raw2row_cache:
+                raw_ids = snapshots[year]['author'].raw_ids
+                raw2row_cache[year] = {aid: i for i, aid in enumerate(raw_ids)}
+            mapping = raw2row_cache[year]
+            rows = [mapping[a] for a in author_ids if a in mapping]
+            if len(rows) == 0:
+                return torch.empty(0, dtype=torch.long, device=device)
+            return torch.tensor(rows, dtype=torch.long, device=device)
+
+        # --------------------------------------------------------------
+        # build the 5-step sequence for every team  →  [N, 5, H]
+        # --------------------------------------------------------------
+        seq_steps = []
+        for offset in range(history - 1, -1, -1):          # 4 … 0
+            yr = current_year_idx - offset
+
+            # (i) author embedding
+            author_emb = torch.zeros(N, H, device=device)
+            if offset != 0 and yr >= 0:                     # past year
+                enc_dict = self.encoder(snapshots[yr])
+                for n, (au_list, _) in enumerate(teams):
+                    row_idx = _rows_of(yr, au_list)
+                    if row_idx.numel() > 0:
+                        author_emb[n] = enc_dict['author'][row_idx].mean(0)
+
+            # (ii) topic vector (k = 0 receives weight; past steps do not)
+            topic_vec_batch = torch.stack([t[1] for t in teams]).to(device)
+
+            v_k = ( self.imputer.w['author'] * author_emb +
+                    self.imputer.w['self']   * topic_vec_batch )
+            seq_steps.append(v_k)
+
+        V_p = torch.stack(seq_steps, dim=1)                 # [N, 5, H]
+
+        # --------------------------------------------------------------
+        # Predict with ImpactRNN
+        # --------------------------------------------------------------
+        eta, mu, sigma = self.generator(V_p)
+        horizons = self.horizons.to(device)
+        cum = self.generator.predict_cumulative(horizons, eta, mu, sigma)
+        yearly = torch.cat([cum[:, :1], cum[:, 1:] - cum[:, :-1]], 1) # [N,5]
+        return yearly

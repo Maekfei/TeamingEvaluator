@@ -17,11 +17,11 @@ from tqdm import tqdm
 # ------------- paths ------------------------------------------------------
 PAPER_JSON = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/' \
 'papernodes_remove0/paper_nodes_GNN_yearly.json.gz'
-# EMB_NPZ = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/' \
-# 'tkg_embeddings_all_2024.npz'
-EMB_NPZ = '/data/jx4237data/GNNteamingEvaluator/TeamingEvaluator/data_examine/output_npz/OpenAI_paper_embeddings.npz'
-CACHE_DIR    = 'data/yearly_snapshots'          # *.pt files go here
-META_CACHE   = os.path.join(CACHE_DIR, 'mappings.pkl')   # id ↔ idx tables
+EMB_NPZ = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/' \
+'tkg_embeddings_all_2024.npz'
+# EMB_NPZ = '/data/jx4237data/GNNteamingEvaluator/TeamingEvaluator/data_examine/output_npz/OpenAI_paper_embeddings.npz'
+CACHE_DIR    = 'data/yearly_snapshots_specter2'          # *.pt files go here
+META_CACHE   = os.path.join(CACHE_DIR, 'mappings_specter2.pkl')   # id ↔ idx tables
 
 # ------------- load the paper JSON file ---------------------------------
 print('[dataset_builder] loading paper JSON …')
@@ -29,7 +29,7 @@ with gzip.open(PAPER_JSON, 'rt', encoding='utf-8') as f:
     paper_json = json.load(f)
 
 # ------------- load the big embedding file --------------------------------
-print('[dataset_builder] loading OpenAI embeddings …')
+print('[dataset_builder] loading SPECTER2 embeddings …')
 with np.load(EMB_NPZ, mmap_mode='r') as npz:
     emb_matrix = npz['embeddings']       # mem-mapped (N, 768) float32
     emb_ids    = npz['ids'].astype(str)  # 1-to-1 list of PubMed IDs
@@ -79,178 +79,140 @@ def load_or_init_mappings():
 
 PAPER2IDX, AUT2IDX, VEN2IDX = load_or_init_mappings()
 
+ACTIVE_PAPERS  : list[str] = []
+ACTIVE_AUTHS   : list[str] = []
+ACTIVE_VENUES  : list[str] = []
+
+
+PAPER_LIDX_OF: dict[str, int] = {}      # global id  -> local contiguous id
+AUTH_LIDX_OF : dict[str, int] = {}
+VEN_LIDX_OF  : dict[str, int] = {}
+
+def _assign_local_id(gid2lidx: dict, active_list: list, gid: str | int):
+    """
+    Helper – gives every *global* node id a *local* contiguous index
+    that never changes once it has been assigned.
+    """
+    if gid not in gid2lidx:
+        gid2lidx[gid] = len(active_list)
+        active_list.append(gid)
+    return gid2lidx[gid]
 
 # ------------- create one snapshot ---------------------------------------
-def build_snapshot(up_to_year: int,
-                   L: int = 5,) -> HeteroData:
-    """
-    Parameters
-    ----------
-    up_to_year : include papers published ≤ this year
-    L          : prediction horizon (# yearly citation counts)
-    """
+def build_snapshot(up_to_year: int, L: int = 5) -> HeteroData:
     print(f'[dataset_builder]   ⇒ building snapshot ≤ {up_to_year}')
 
+    # --------------------------------------------------------------- #
+    # 1) register every node that exists up-to this year              #
+    # --------------------------------------------------------------- #
+    paper_ids = [pid for pid, n in paper_json.items()
+                 if n['features']['is_core'] == 1
+                 and n['features']['PubYear'] <= up_to_year]
 
-    # ---------------- collect node-level tensors --------------------------
-    num_papers = sum(1 for v in paper_json.values()
-                     if v['features']['PubYear'] <= up_to_year and
-                        v['features']['is_core'] == 1) # important, only choose around ~ 9k papers
-    # only choose the authors that are authors of core papers and published <= up_to_year
-    num_authors_est = sum(1 for v in paper_json.values()
-                     if v['features']['PubYear'] <= up_to_year and
-                        v['features']['is_core'] == 1
-                        for a in v['neighbors']['author']) # not used yet
-    # only choose the venues that are venues of core papers published <= up_to_year
-    num_venues = sum(1 for v in paper_json.values()
-                     if v['features']['PubYear'] <= up_to_year and
-                        v['features']['is_core'] == 1
-                        for a in v['features']['Venue']) # not used yet
+    for pid in sorted(paper_ids, key=lambda p: PAPER2IDX[p]):   # deterministic
+        _assign_local_id(PAPER_LIDX_OF, ACTIVE_PAPERS, pid)
 
+        n = paper_json[pid]
+        for aid in n['neighbors']['author']:
+            _assign_local_id(AUTH_LIDX_OF,  ACTIVE_AUTHS,  aid)
+        ven = n['features']['Venue']
+        _assign_local_id(VEN_LIDX_OF,       ACTIVE_VENUES, ven)
+
+    num_papers  = len(ACTIVE_PAPERS)
+    num_authors = len(ACTIVE_AUTHS)
+    num_venues  = len(ACTIVE_VENUES)
+
+    # --------------------------------------------------------------- #
+    # 2)  build tensors (only existing rows, no zero-padding)         #
+    # --------------------------------------------------------------- #
     data = HeteroData()
 
+    # -------- papers ------------------------------------------------
+    x_paper = torch.zeros(num_papers, EMB_DIM)
+    y_cit   = torch.zeros(num_papers, L, dtype=torch.long)
+    is_core = torch.zeros(num_papers,     dtype=torch.bool)
+    y_year  = torch.zeros(num_papers,     dtype=torch.long)
 
-    # ----- paper features -------------------------------------------------
-    x_paper  = torch.zeros(num_papers, EMB_DIM, dtype=torch.float32)
-    y_cit    = torch.zeros(num_papers, L,        dtype=torch.long)
-    is_core  = torch.zeros(num_papers,           dtype=torch.bool)
-    # add one paper feature: the year of publication, the value set as v['features']['PubYear']
-    y_year   = torch.zeros(num_papers,           dtype=torch.long)
+    for pid in paper_ids:
+        p = PAPER_LIDX_OF[pid]
+        node = paper_json[pid]
 
-    paper_idx_of = {}        # PubMed ID  → local index
-    for pid, node in paper_json.items():
-        year = node['features']['PubYear']
-        if year > up_to_year or node['features']['is_core'] == 0:
-            continue
-        p_idx = len(paper_idx_of)
-        paper_idx_of[pid] = p_idx # local index
-
-
-        # OpenAI embedding  (falls back to zeros if missing); here it will be 256 dim
-        row = id2embrow.get(pid, None)
+        row = id2embrow.get(pid)
         if row is not None:
-            x_paper[p_idx] = torch.from_numpy(emb_matrix[row])
+            x_paper[p] = torch.from_numpy(emb_matrix[row])
 
-        # citation labels
         for l in range(1, L + 1):
-            y_cit[p_idx, l - 1] = node['features'].get(
-                f'yearly_citation_count_{l}', 0)
+            y_cit[p, l-1] = node['features'].get(f'yearly_citation_count_{l}', 0)
 
-        # core flag
-        if node['features']['is_core'] == 1:
-            is_core[p_idx] = True
-        # year of publication
-        y_year[p_idx] = year
+        is_core[p] = True
+        y_year[p]  = node['features']['PubYear']
 
-    data['paper'].x_title_emb   = x_paper
-    data['paper'].y_citations   = y_cit
-    data['paper'].is_core       = is_core       # ← used inside loss fn
-    data['paper'].y_year       = y_year       # ← used inside loss fn
+    data['paper'].x_title_emb = x_paper
+    data['paper'].y_citations = y_cit
+    data['paper'].is_core     = is_core
+    data['paper'].y_year      = y_year
 
-    # ---------------------------------------------------------------
-    # Author / venue embeddings (pre-computed JSON files)
-    # ---------------------------------------------------------------
-    EMB_DIR = '/data/jx4237data/GNNteamingEvaluator/TeamingEvaluator/data_examine/output_embeddings_yearly'          # ← adjust if necessary
-    fn_author = os.path.join(EMB_DIR,
-                             f'author_embedding_{up_to_year}.json')
-    fn_venue  = os.path.join(EMB_DIR,
-                             f'venue_embedding_{up_to_year}.json')
+    # -------- authors / venues -------------------------------------
+    x_author = torch.zeros(num_authors, EMB_DIM)
+    x_venue  = torch.zeros(num_venues,  EMB_DIM)
 
-    # ----------------------------------------------------------------
-    # 1) tensors initialised with zeros, only keep num_authors_est and num_venues
-    #    (the rest will be ignored)
-    # ----------------------------------------------------------------
-    x_author = torch.zeros(len(AUT2IDX), EMB_DIM, dtype=torch.float32)
-    x_venue  = torch.zeros(len(VEN2IDX),  EMB_DIM, dtype=torch.float32)
-
-    # helper to copy a Python list -> torch row
-    def _copy_into(row_idx: int, vec: list, dest: torch.Tensor):
+    def _copy(idx: int, vec: list, dest: torch.Tensor):
         try:
-            dest[row_idx] = torch.tensor(vec, dtype=dest.dtype)
+            dest[idx] = torch.tensor(vec, dtype=dest.dtype)
         except Exception as e:
-            # silently ignore malformed / wrong-dim vectors
-            print(f'  [warn] could not copy embedding for row {row_idx}: {e}')
-
-    # ----------------------------------------------------------------
-    # 2) load author embeddings
-    # ----------------------------------------------------------------
+            print(f'[warn] could not copy embedding row {idx}: {e}')
+    EMB_DIR = '/data/jx4237data/GNNteamingEvaluator/TeamingEvaluator/data_examine/output_embeddings_yearly_SPECTER2'
+    fn_author = os.path.join(EMB_DIR, f'author_embedding_{up_to_year}.json')
     if os.path.isfile(fn_author):
-        with open(fn_author, 'r', encoding='utf-8') as fh:
-            auth_json = json.load(fh)
+        for aid, vec in json.load(open(fn_author)).items():
+            if aid in AUTH_LIDX_OF:
+                _copy(AUTH_LIDX_OF[aid], vec, x_author)
 
-        for aid, vec in auth_json.items():
-            a_idx = AUT2IDX.get(aid)
-            if a_idx is not None:
-                _copy_into(a_idx, vec, x_author)
-    else:
-        print(f'  [warn] author embedding file not found: {fn_author}')
-
-    # ----------------------------------------------------------------
-    # 3) load venue embeddings
-    # ----------------------------------------------------------------
+    fn_venue  = os.path.join(EMB_DIR, f'venue_embedding_{up_to_year}.json')
     if os.path.isfile(fn_venue):
-        with open(fn_venue, 'r', encoding='utf-8') as fh:
-            ven_json = json.load(fh)
+        for ven, vec in json.load(open(fn_venue)).items():
+            if ven in VEN_LIDX_OF:
+                _copy(VEN_LIDX_OF[ven], vec, x_venue)
 
-        for ven, vec in ven_json.items():
-            v_idx = VEN2IDX.get(ven)
-            if v_idx is not None:
-                _copy_into(v_idx, vec, x_venue)
-    else:
-        print(f'  [warn] venue embedding file not found: {fn_venue}')
+    data['author'].x = x_author
+    data['venue' ].x = x_venue
 
-    # ----------------------------------------------------------------
-    # 4) attach to the HeteroData object
-    # ----------------------------------------------------------------
-    data['author'].x = x_author # 256 dim embedding
-    data['venue' ].x = x_venue # 256 dim embedding
+    # --------------------------------------------------------------- #
+    # 3) edges (use the local contiguous indices)                     #
+    # --------------------------------------------------------------- #
+    # author → paper
+    a_src, a_dst = [], []
+    for pid in paper_ids:
+        p = PAPER_LIDX_OF[pid]
+        for aid in paper_json[pid]['neighbors']['author']:
+            a_src.append(AUTH_LIDX_OF[aid]);  a_dst.append(p)
+    data['author', 'writes', 'paper'].edge_index   = torch.tensor([a_src, a_dst])
+    data['paper',  'written_by', 'author'].edge_index = torch.tensor([a_dst, a_src])
 
-    # ---------------- edges ----------------------------------------------
-    # 1) author ⟶ paper (“writes”)
-    src, dst = [], []
-    for pid, node in paper_json.items():
-        if node['features']['PubYear'] > up_to_year or \
-           node['features']['is_core'] == 0: # important, only choose around ~ 9k papers
-            continue
-        p_idx = paper_idx_of[pid]
-        for aid in node['neighbors']['author']:
-            src.append(AUT2IDX[aid])
-            dst.append(p_idx)
-    data['author', 'writes', 'paper'].edge_index = \
-        torch.tensor([src, dst], dtype=torch.long)
-    data['paper', 'written_by', 'author'].edge_index = \
-        torch.tensor([dst, src], dtype=torch.long)
+    # paper → paper
+    p_src, p_dst = [], []
+    for pid in paper_ids:
+        p = PAPER_LIDX_OF[pid]
+        for ref in paper_json[pid]['neighbors']['reference_papers']:
+            if ref in PAPER_LIDX_OF and paper_json[ref]['features']['PubYear'] <= up_to_year:
+                p_src.append(p);  p_dst.append(PAPER_LIDX_OF[ref])
+    data['paper', 'cites',   'paper'].edge_index   = torch.tensor([p_src, p_dst])
+    data['paper', 'cited_by','paper'].edge_index   = torch.tensor([p_dst, p_src])
 
-    # 2) paper ⟶ paper (“cites”)
-    src, dst = [], []
-    for pid, node in paper_json.items():
-        if node['features']['PubYear'] > up_to_year or \
-           node['features']['is_core'] == 0: # important, only choose around ~ 9k papers
-            continue
-        p_idx = paper_idx_of[pid]
-        for ref in node['neighbors']['reference_papers']:
-            if ref in paper_idx_of:                 # referenced paper ≤ year
-                src.append(p_idx)
-                dst.append(paper_idx_of[ref])
-    data['paper', 'cites',    'paper'].edge_index = \
-        torch.tensor([src, dst], dtype=torch.long)
-    data['paper', 'cited_by', 'paper'].edge_index = \
-        torch.tensor([dst, src], dtype=torch.long)
+    # paper → venue
+    v_src, v_dst = [], []
+    for pid in paper_ids:
+        p = PAPER_LIDX_OF[pid]
+        v = VEN_LIDX_OF[paper_json[pid]['features']['Venue']]
+        v_src.append(p);  v_dst.append(v)
+    data['paper', 'published_in', 'venue'].edge_index = torch.tensor([v_src, v_dst])
+    data['venue', 'publishes',    'paper'].edge_index = torch.tensor([v_dst, v_src])
 
-    # 3) paper ⟶ venue (“published_in”)
-    src, dst = [], []
-    for pid, node in paper_json.items():
-        if node['features']['PubYear'] > up_to_year or \
-           node['features']['is_core'] == 0: # important, only choose around ~ 9k papers
-            continue
-        p_idx = paper_idx_of[pid]
-        v_idx = VEN2IDX[node['features']['Venue']]
-        src.append(p_idx)
-        dst.append(v_idx)
-    data['paper', 'published_in', 'venue'].edge_index = \
-        torch.tensor([src, dst], dtype=torch.long)
-    data['venue', 'publishes', 'paper'].edge_index = \
-        torch.tensor([dst, src], dtype=torch.long)
+    # --------------------------------------------------------------- #
+    # 4) store the raw-id lists inside the snapshot (needed later)    #
+    # --------------------------------------------------------------- #
+    data['paper'].raw_ids  = ACTIVE_PAPERS.copy()
+    data['author'].raw_ids = ACTIVE_AUTHS.copy()
+    data['venue'].raw_ids  = ACTIVE_VENUES.copy()
 
-    # done ----------------------------------------------------------------
     return data

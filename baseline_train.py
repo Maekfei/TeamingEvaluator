@@ -24,7 +24,7 @@ def build_dataset(snapshots, year_indices, years_all):      # ← extra arg
     Generates one (X, y) pair for every paper *published in the calendar year*
     designated by `year_indices`.
 
-    X  : [N, 513]      256 topic emb + 256 mean-author emb + 1 (#authors)
+    X  : [N, 1537]      768 topic emb + 768 mean-author emb + 1 (#authors)
     y  : [N, 5]        5 yearly citation counts
     """
     feats, labels = [], []
@@ -40,7 +40,7 @@ def build_dataset(snapshots, year_indices, years_all):      # ← extra arg
             continue
 
         paper_ids    = mask.nonzero(as_tuple=False).view(-1)
-        topic_now    = g_now["paper"].x_title_emb[paper_ids].cpu()     # [P,256]
+        topic_now    = g_now["paper"].x_title_emb[paper_ids].cpu()     # [P,768]
         y_citations  = g_now["paper"].y_citations [paper_ids].cpu().float() # [P,5]
 
         # author→paper incidence in the current year
@@ -67,12 +67,12 @@ def build_dataset(snapshots, year_indices, years_all):      # ← extra arg
                 valid_ids = [aid for aid in auth_ids
                              if aid < auth_emb_prev.size(0)]
                 mean_auth = (auth_emb_prev[valid_ids].mean(0)
-                             if valid_ids else torch.zeros(256))
+                             if valid_ids else torch.zeros(768))
             else:
-                mean_auth = torch.zeros(256)
+                mean_auth = torch.zeros(768)
 
             num_auth = torch.tensor([len(auth_ids)], dtype=torch.float32)
-            x = torch.cat([topic_vec, mean_auth, num_auth])   # 513-dim
+            x = torch.cat([topic_vec, mean_auth, num_auth])   # 1537-dim
 
             feats .append(x.numpy())
             labels.append(y_citations[idx_local].numpy())
@@ -115,7 +115,7 @@ def main():
     years_all = list(range(first_needed,
                            args.test_years[1] + 1))
     console.print(f"Loading {len(years_all)} yearly graphs …")
-    snapshots = load_snapshots("data/raw/G_{}.pt", years_all)
+    snapshots = load_snapshots("data/yearly_snapshots_specter2/G_{}.pt", years_all)
 
     # 2) index helpers -----------------------------------------------------
     year2idx = {y: i for i, y in enumerate(years_all)}

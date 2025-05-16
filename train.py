@@ -4,11 +4,7 @@ from torch.optim import Adam
 from utils.data_utils import load_snapshots
 from models.full_model import ImpactModel
 from rich.console import Console
-from rich.logging import RichHandler
 import os
-import pickle
-import sys
-
 
 # (1) Function to store each evaluated model checkpoint
 def save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values, current_rmsle_values, args, training_loss, run_dir, console): 
@@ -94,7 +90,9 @@ def main():
     try: # Wrap the main logic in try...finally to ensure log file is closed
         console.print(f"Training log will be saved to: {log_file_path}")
         console.print(f"Run directory: {run_dir}")
-
+        console.print(f"Arguments: {args}")
+        console.print(f"CUDA available: {torch.cuda.is_available()}")
+        
         train_years = list(range(args.train_years[0], args.train_years[1] + 1))
         test_years = list(range(args.test_years[0], args.test_years[1] + 1))
 
@@ -102,16 +100,12 @@ def main():
         console.print(f"[bold]Test years:[/bold]  {test_years}")
         console.print(f"[bold]Device:[/bold] {args.device}")
         
-        snapshots = load_snapshots("data/raw/G_{}.pt", train_years + test_years)
+        snapshots = load_snapshots("data/yearly_snapshots_specter2/G_{}.pt", train_years + test_years)
         snapshots = [g.to(args.device) for g in snapshots]
         
-        META_CACHE = "data/yearly_snapshots/mappings.pkl"
-        with open(META_CACHE, "rb") as fh:
-            _, AUT2IDX, _ = pickle.load(fh)
-
-        idx2aut = [None] * len(AUT2IDX)
-        for a, i in AUT2IDX.items():
-            idx2aut[i] = a
+        author_raw_ids = snapshots[-1]['author'].raw_ids          # list[str]
+        AUT2IDX = {aid: i for i, aid in enumerate(author_raw_ids)}
+        idx2aut = author_raw_ids                                  # same order
 
         metadata = snapshots[0].metadata()
         in_dims = {
