@@ -1,5 +1,4 @@
 import os, torch
-from torch_geometric.data import HeteroData
 
 def ensure_x_field(data):
     # If a node type has no .x but has .x_title_emb, copy it.

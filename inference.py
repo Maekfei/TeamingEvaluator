@@ -1,5 +1,5 @@
-import torch, pickle
-from torch_geometric.data import HeteroData
+import torch
+
 from utils.data_utils import load_snapshots
 from models.full_model import ImpactModel
 
@@ -16,7 +16,7 @@ snapshots = [g.to(device) for g in snapshots]
 # ---------------------------------------------------------------------
 # 2) load the trained model checkpoint
 # ---------------------------------------------------------------------
-ckpt = torch.load("runs/20250516_004747_team/best_model_epoch120_male0.4242_team.pt", map_location=device, weights_only=False)
+ckpt = torch.load("/data/jx4237data/GNNteamingEvaluator/TeamingEvaluator/best_ckpt/best_model_epoch120_male0.4242_team.pt", map_location=device, weights_only=False)
 model_args   = ckpt['args']
 metadata     = snapshots[0].metadata()
 in_dims = {

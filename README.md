@@ -61,8 +61,7 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 
 # PyTorch – change URL for your CUDA/CPU build
-pip install torch --index-url https://download.pytorch.org/whl/cu118
-pip install -r requirements.txt
+pip install -r requirements.txt -f https://download.pytorch.org/whl/torch_stable.html
 ```
 
 ---
