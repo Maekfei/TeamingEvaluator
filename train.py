@@ -5,6 +5,8 @@ from utils.data_utils import load_snapshots
 from models.full_model import ImpactModel
 from rich.console import Console
 import os
+from utils.plotting import plot_pred_true_distributions, plot_yearly_aggregates
+import numpy as np
 
 # (1) Function to store each evaluated model checkpoint
 def save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values, current_rmsle_values, args, training_loss, run_dir, console): 
@@ -62,7 +64,7 @@ def main():
     parser.add_argument("--hidden_dim", type=int, default=50)
     parser.add_argument("--epochs", type=int, default=150, help="Total number of epochs to train for.")
     parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
-    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--lr", type=float, default=(1/2) * 1e-2)
     parser.add_argument("--beta", type=float, default=.5) # regularization parameter
     parser.add_argument("--device", default="cuda:7" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--cold_start_prob", type=float, default=0.3,
@@ -73,7 +75,8 @@ def main():
 
     parser.add_argument("--load_checkpoint", type=str, default=None,
                         help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
-    
+    parser.add_argument("--training_off", type=int, default=0,
+                    help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
     args = parser.parse_args()
 
     run_dir_suffix = f"_{args.eval_mode}"
@@ -100,7 +103,7 @@ def main():
         console.print(f"[bold]Test years:[/bold]  {test_years}")
         console.print(f"[bold]Device:[/bold] {args.device}")
         
-        snapshots = load_snapshots("data/yearly_snapshots_oai/G_{}.pt", train_years + test_years)
+        snapshots = load_snapshots("data/yearly_snapshots_specter2/G_{}.pt", train_years + test_years)
         snapshots = [g.to(args.device) for g in snapshots]
         
         author_raw_ids = snapshots[-1]['author'].raw_ids          # list[str]
@@ -182,6 +185,51 @@ def main():
         else:
             console.print(f"Starting training from epoch {start_epoch} to {args.epochs}.")
 
+        if args.training_off:
+            console.print(f"[yellow]Training is turned off (training_off={args.training_off}). No training will be performed.[/yellow]")
+            model.eval()
+            console.print(f"Evaluating model using ckpt: {args.load_checkpoint} ")
+            with torch.no_grad():
+                current_male_values = None
+                current_rmsle_values = None
+
+                if args.eval_mode == "paper":
+                    male, rmsle, mape = model.evaluate(
+                        snapshots,
+                        list(range(len(train_years), len(train_years)+len(test_years))),
+                        start_year=train_years[0]
+                    )
+                else:  # counter-factual
+                    male, rmsle, mape, y_true, y_predict = model.evaluate_team(
+                        snapshots,
+                        list(range(len(train_years), len(train_years)+len(test_years))),
+                        start_year=train_years[0],
+                        return_raw=True
+                    )
+                
+                
+                console.print(f"[green]Eval ({args.eval_mode})[/green] "
+                                f"MALE {male}  RMSLE {rmsle} MAPE {mape}")
+                
+                plot_pred_true_distributions(
+                    y_true.numpy(),                   # expects numpy
+                    y_predict.numpy(),
+                    horizons=[f"Year {i}" for i in range(5)],
+                    bins=40,
+                    save_path="./figs/ours_dist_all_years.png",
+                    show=False)
+                
+                plot_yearly_aggregates(
+                    y_true.numpy(),
+                    y_predict.numpy(),
+                    horizons=[f"Year {i}" for i in range(5)],
+                    agg_fn=np.median,
+                    show_iqr=True,
+                    save_path="./figs/median_iqr.png",
+                    show=False)
+
+            return 0
+
         loss = None
         log = {}
 
@@ -197,7 +245,7 @@ def main():
             log_items_str = "  ".join(f"{k}:{v:.4f}" for k, v in log.items())
             console.log(f"Epoch {epoch:03d}  Loss: {loss.item():.4f}  {log_items_str}")
 
-            if epoch % 60 == 0 or epoch == args.epochs:
+            if epoch % 20 == 0 or epoch == args.epochs:
                 model.eval()
                 with torch.no_grad():
                     current_male_values = None

@@ -187,19 +187,30 @@ python baseline_train.py \
 
 ## 8  Results
 
-SPECTER 2 Embeddings.
+
+# Model Performance Comparison
 
 | Model | MALE-Y1 ↓ | MALE-Y2 ↓ | MALE-Y3 ↓ | MALE-Y4 ↓ | MALE-Y5 ↓ | MALE-Avg ↓ | RMSLE-Y1 ↓ | RMSLE-Y2 ↓ | RMSLE-Y3 ↓ | RMSLE-Y4 ↓ | RMSLE-Y5 ↓ | RMSLE-Avg ↓ |
-|-------|:--------:|:--------:|:--------:|:--------:|:--------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:----------:|
-| GBM baseline | **0.450** | 0.655 | 0.700 | 0.725 | 0.743 | 0.655 | 0.590 | 0.839 | 0.887 | 0.933 | 0.956 | 0.841 |
- | ours | 0.424 | **0.562** | **0.601** | **0.604** | **0.606** | **0.560** | **0.523** | **0.698** | **0.755** | **0.780** | **0.796** | **0.710** |
-**Notes:**
-- Lower values are better for all metrics (↓)
-- MALE = Mean Absolute Logarithmic Error
-- RMSLE = Root Mean Square Logarithmic Error
-- Y1-Y5 = prediction years 1 through 5
-- R-GCN results from epoch 120 (team mode). 22 min training time.
+|-------|:---------:|:---------:|:---------:|:---------:|:---------:|:----------:|:----------:|:----------:|:----------:|:----------:|:----------:|:-----------:|
+| GBM baseline (Specter 2 ebd) | 0.450 | 0.655 | 0.700 | 0.725 | 0.743 | 0.655 | 0.590 | 0.839 | 0.887 | 0.933 | 0.956 | 0.841 |
+| GBM baseline (OpenAI ebd) | 0.464 | 0.637 | 0.720 | 0.733 | 0.754 | 0.661 | 0.626 | 0.815 | 0.915 | 0.939 | 0.970 | 0.853 |
+| Ours (Specter 2 ebd) | **0.424** | 0.562 | 0.601 | **0.604** | **0.606** | **0.560** | **0.523** | 0.698 | **0.755** | **0.780** | **0.796** | **0.710** |
+| Ours (OpenAI ebd) | 0.458 | **0.554** | **0.600** | 0.619 | 0.628 | 0.572 | 0.552 | **0.697** | 0.768 | 0.798 | 0.816 | 0.726 |
 
+
+| Model                        | MAPE-Y1 ↓ | MAPE-Y2 ↓ | MAPE-Y3 ↓ | MAPE-Y4 ↓ | MAPE-Y5 ↓ | MAPE-Avg ↓ |
+|-----------------------------|:---------:|:---------:|:---------:|:---------:|:---------:|:----------:|
+| GBM baseline (Specter 2 ebd) | 1.2379    | 2.1961    | 2.2876    | 2.6075    | 2.6564    | 2.197       |
+| Ours (Specter 2 ebd)         | **1.0131**    | **1.3828**    | **1.4284**    | **1.3749**    | **1.2899**    | **1.298**       |
+
+## Notes
+
+- Lower values are better for all metrics (↓)
+- **MALE** = Mean Absolute Logarithmic Error  
+- **RMSLE** = Root Mean Square Logarithmic Error  
+- **MAPE** = Mean Absolute Percentage Error  
+- **Y1-Y5** = Prediction years 1 through 5  
+- "Ours" results are after 120 epochs (Specter 2, 22mins training) and after 100 epochs (OpenAI, 18mins training)
 
 ---
 

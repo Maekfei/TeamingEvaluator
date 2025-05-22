@@ -3,7 +3,7 @@ import torch.nn as nn
 from .rgcn_encoder import RGCNEncoder
 from .imputer import WeightedImputer
 from .impact_rnn import ImpactRNN
-from utils.metrics import rmsle_vec, male_vec
+from utils.metrics import rmsle_vec, male_vec, mape_vec
 
 
 class ImpactModel(nn.Module):
@@ -313,7 +313,7 @@ class ImpactModel(nn.Module):
 
     # -----------------------------------------------------------------
     @torch.no_grad()
-    def evaluate_team(self, snapshots, years_test, start_year):
+    def evaluate_team(self, snapshots, years_test, start_year, return_raw=False):
         """
         Evaluate in the counter-factual setting:
         use only authors + topic of each paper in test years.
@@ -322,8 +322,9 @@ class ImpactModel(nn.Module):
         horizons  = self.horizons.to(device)
 
         encs = [self.encoder(g) for g in snapshots]       # testing years
+        y_true_all, y_pred_all = [], []
 
-        males, rmsles = [], []
+        males, rmsles, mapes = [], [] ,[]
         for t in years_test:
             data = snapshots[t]
             year_actual = start_year + t
@@ -358,10 +359,24 @@ class ImpactModel(nn.Module):
 
             males .append(male_vec (y_true, y_hat))
             rmsles.append(rmsle_vec(y_true, y_hat))
+            mapes.append(mape_vec(y_true, y_hat))
+
+
+            # store raw arrays -------------------------------------------------
+            if return_raw:
+                y_true_all.append(y_true.cpu())
+                y_pred_all.append(y_hat.cpu())
 
         male  = torch.stack(males ).mean(0)
         rmsle = torch.stack(rmsles).mean(0)
-        return male.cpu(), rmsle.cpu()
+        mape  = torch.stack(mapes ).mean(0)
+
+        if return_raw:
+            y_true_all = torch.cat(y_true_all, 0)
+            y_pred_all = torch.cat(y_pred_all, 0)
+            return male.cpu(), rmsle.cpu(), mape.cpu(), y_true_all, y_pred_all
+        else:
+            return male.cpu(), rmsle.cpu(), mape.cpu()
     
     # -----------------------------------------------------------------
     @torch.no_grad()
