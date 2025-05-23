@@ -5,7 +5,7 @@ from utils.data_utils import load_snapshots
 from models.full_model import ImpactModel
 from rich.console import Console
 import os
-from utils.plotting import plot_pred_true_distributions, plot_yearly_aggregates
+from utils.plotting import plot_pred_true_distributions_with_ci, plot_yearly_aggregates
 import numpy as np
 
 # (1) Function to store each evaluated model checkpoint
@@ -64,7 +64,7 @@ def main():
     parser.add_argument("--hidden_dim", type=int, default=50)
     parser.add_argument("--epochs", type=int, default=150, help="Total number of epochs to train for.")
     parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
-    parser.add_argument("--lr", type=float, default=(1/2) * 1e-2)
+    parser.add_argument("--lr", type=float, default=3*1e-2)
     parser.add_argument("--beta", type=float, default=.5) # regularization parameter
     parser.add_argument("--device", default="cuda:7" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--cold_start_prob", type=float, default=0.3,
@@ -77,6 +77,14 @@ def main():
                         help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
     parser.add_argument("--training_off", type=int, default=0,
                     help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
+    # ['all features', 'drop toic']
+    # choose one of the two
+    parser.add_argument("--input_feature_model", choices=['all features', 'drop topic'], default='all features',
+                        help="Input feature model to use. Choose one of the two: 'all features' or 'drop topic'.")
+    parser.add_argument("--inference_time_author_dropping", type=bool, default=False,
+                        help="Whether to drop authors from the training set. Default is False.")
+    parser.add_argument("--inference_time_num_author_dropping_k", type=int, default=0,
+                        help="Number of authors to drop from the training set. Default is 0.")
     args = parser.parse_args()
 
     run_dir_suffix = f"_{args.eval_mode}"
@@ -122,7 +130,9 @@ def main():
                             beta=args.beta,
                             cold_start_prob=args.cold_start_prob,
                             aut2idx=AUT2IDX,
-                            idx2aut=idx2aut
+                            idx2aut=idx2aut,
+                            input_feature_model=args.input_feature_model,
+                            args=args,
                             ).to(args.device)
         optimizer = Adam(model.parameters(), lr=args.lr)
 
@@ -211,12 +221,12 @@ def main():
                 console.print(f"[green]Eval ({args.eval_mode})[/green] "
                                 f"MALE {male}  RMSLE {rmsle} MAPE {mape}")
                 
-                plot_pred_true_distributions(
+                plot_pred_true_distributions_with_ci(
                     y_true.numpy(),                   # expects numpy
                     y_predict.numpy(),
                     horizons=[f"Year {i}" for i in range(5)],
                     bins=40,
-                    save_path="./figs/ours_dist_all_years.png",
+                    save_path="./figs/ours_dist_all_years_ci.png",
                     show=False)
                 
                 plot_yearly_aggregates(
@@ -252,13 +262,13 @@ def main():
                     current_rmsle_values = None
 
                     if args.eval_mode == "paper":
-                        male, rmsle = model.evaluate(
+                        male, rmsle, mape = model.evaluate(
                             snapshots,
                             list(range(len(train_years), len(train_years)+len(test_years))),
                             start_year=train_years[0]
                         )
                     else:  # counter-factual
-                        male, rmsle = model.evaluate_team(
+                        male, rmsle, mape = model.evaluate_team(
                             snapshots,
                             list(range(len(train_years), len(train_years)+len(test_years))),
                             start_year=train_years[0]
@@ -271,7 +281,7 @@ def main():
                     if not isinstance(current_rmsle_values, list): current_rmsle_values = [current_rmsle_values]
                     
                     console.print(f"[green]Eval Epoch {epoch:03d} ({args.eval_mode})[/green] "
-                                  f"MALE {current_male_values}  RMSLE {current_rmsle_values}")
+                                  f"MALE {current_male_values}  RMSLE {current_rmsle_values} MAPE {mape}")
 
                     if loss is not None: 
                         save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values, current_rmsle_values, args, loss.item(), run_dir, console)

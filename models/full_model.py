@@ -24,7 +24,9 @@ class ImpactModel(nn.Module):
         meta_types: tuple[str, ...] = ("author", "venue", "paper"),
         cold_start_prob=0.0,
         aut2idx=None,
-        idx2aut=None
+        idx2aut=None,
+        input_feature_model=None,
+        args=None,
     ):
         super().__init__()
         self.encoder = RGCNEncoder(metadata, in_dims, hidden_dim) # output: keys ('author', 'paper', 'venue'), values: embeddings. (num_nodes_of_that_type, hidden_dim)
@@ -34,8 +36,9 @@ class ImpactModel(nn.Module):
         self.hidden_dim = hidden_dim
         self.cold_p = cold_start_prob
         self.aut2idx = aut2idx
+        self.args = args
         self.idx2aut = idx2aut
-
+        self.input_feature_model = input_feature_model
         self.history   = len(horizons)      # number of years fed to the GRU
         self.horizons = torch.tensor(horizons, dtype=torch.float32)
         self.eps = 1.0                    # +1 for zero-citation papers
@@ -96,7 +99,11 @@ class ImpactModel(nn.Module):
 
             paper_ids = mask.nonzero(as_tuple=False).view(-1)
             y_true    = data['paper'].y_citations[paper_ids].float()
-            topic_all = embeddings[t]['paper'][paper_ids]
+            if self.input_feature_model == 'drop topic':
+                topic_all = torch.zeros(y_true.size(0), self.hidden_dim, device=device)
+            else:
+                topic_all = embeddings[t]['paper'][paper_ids]
+
             N = y_true.size(0)
 
             # ----------------------------------------------------------
@@ -121,7 +128,7 @@ class ImpactModel(nn.Module):
             seq_steps = []
             for k in range(self.history): # k = 0 … 4
                 if k == 0:
-                    # step-0  : the current year, topic only  (no neighbours ⇒ no leakage)
+                    # step-0  : the current year, topic only  (no neighbours ⇒ no leakage), if drop topic, then all zeros
                     seq_k = topic_all                             # [N,H]
                 else:
                     yr = t - k                                        # t-1 … t- 4
@@ -181,7 +188,7 @@ class ImpactModel(nn.Module):
         # 1) encode all snapshots once
         embeddings = [self.encoder(g) for g in snapshots]
 
-        males, rmsles = [], []
+        males, rmsles, mapes = [], [] ,[]
         for t in years_test:
             data      = snapshots[t]
             year_actual = start_year + t
@@ -191,7 +198,10 @@ class ImpactModel(nn.Module):
 
             paper_ids = mask.nonzero(as_tuple=False).view(-1)
             y_true    = data['paper'].y_citations[paper_ids].float()
-            topic_all = embeddings[t]['paper'][paper_ids]
+            if self.input_feature_model == 'drop topic':
+                topic_all = torch.zeros(y_true.size(0), self.hidden_dim, device=device)
+            else:
+                topic_all = embeddings[t]['paper'][paper_ids]
             N = y_true.size(0)
 
             neigh_cache = [
@@ -233,10 +243,13 @@ class ImpactModel(nn.Module):
 
             males .append(male_vec (y_true, y_hat))
             rmsles.append(rmsle_vec(y_true, y_hat))
+            mapes.append(mape_vec(y_true, y_hat))
+            
 
         male  = torch.stack(males ).mean(0)    # [5]
         rmsle = torch.stack(rmsles).mean(0)
-        return male.cpu(), rmsle.cpu()
+        mape  = torch.stack(mapes ).mean(0)
+        return male.cpu(), rmsle.cpu(), mape.cpu()
 
     # -----------------------------------------------------------------
     # -----------------------------------------------------------------
@@ -257,59 +270,69 @@ class ImpactModel(nn.Module):
         snapshots         : list[HeteroData]  (all yearly graphs)
         current_year_idx  : index of the snapshot in which the paper occurs
         """
-        device    = next(self.parameters()).device
-        topic_vec = topic_vec.to(device)
+        device = next(self.parameters()).device
+        if self.input_feature_model == 'drop topic':
+            topic_vec = torch.zeros(self.hidden_dim, device=device)
+        else:
+            topic_vec = topic_vec.to(device)
+
+        # --- author selection logic for inference-time author dropping ---
+        mode = getattr(self.args, 'inference_time_author_dropping', None)
+        if mode is not None:
+            if mode == 'drop_first' and len(author_ids) >= 1:
+                author_ids = author_ids[1:]
+            elif mode == 'drop_last' and len(author_ids) >= 1:
+                author_ids = author_ids[:-1]
+            elif mode == 'drop_first_and_last' and len(author_ids) >= 2:
+                author_ids = author_ids[1:-1]
+            elif mode == 'keep_first' and len(author_ids) >= 1:
+                author_ids = [author_ids[0]]
+            elif mode == 'keep_last' and len(author_ids) >= 1:
+                author_ids = [author_ids[-1]]
+            # if mode is None or invalid, keep all authors as-is
 
         # ------------- helper to translate raw ids to row indices -----
-        idx_cache: dict[int, torch.Tensor] = {}   # year -> LongTensor indices
+        idx_cache: dict[int, torch.Tensor] = {}
 
         def _author_indices(year: int) -> torch.Tensor:
-            """return LongTensor with valid row indices for <year> snapshot"""
             if year in idx_cache:
-                return idx_cache[year]            # cached
-
-            raw_ids = snapshots[year]['author'].raw_ids      # list[str]
+                return idx_cache[year]
+            raw_ids = snapshots[year]['author'].raw_ids  # list[str]
             raw2row = {aid: i for i, aid in enumerate(raw_ids)}
-
             rows = [raw2row[a] for a in author_ids if a in raw2row]
-            if len(rows) == 0:
-                out = torch.empty(0, dtype=torch.long, device=device)
-            else:
-                out = torch.tensor(rows, dtype=torch.long, device=device)
-
+            out = torch.tensor(rows, dtype=torch.long, device=device) if rows else torch.empty(0, dtype=torch.long, device=device)
             idx_cache[year] = out
             return out
         # --------------------------------------------------------------
 
-        seq = []          # will hold 5 tensors (oldest → newest)
+        seq = []
         for offset in range(self.history - 1, -1, -1):
             yr = current_year_idx - offset
 
-            if offset == 0:                      # publication year
+            if offset == 0:
+                # Prediction year; we skip author embedding by design
                 auth_emb = torch.zeros(self.hidden_dim, device=device)
-
-            elif yr >= 0:                        # one of the past 4 yrs
+            elif yr >= 0:
                 ids = _author_indices(yr)
                 if ids.numel() == 0:
                     auth_emb = torch.zeros(self.hidden_dim, device=device)
                 else:
                     enc_dict = self.encoder(snapshots[yr])
                     auth_emb = enc_dict['author'][ids].mean(0)
-
-            else:                                # before the first snapshot
+            else:
                 auth_emb = torch.zeros(self.hidden_dim, device=device)
 
-            v_k = ( self.imputer.w['author'] * auth_emb +
-                    self.imputer.w['self']   * topic_vec )
+            v_k = (self.imputer.w['author'] * auth_emb +
+                self.imputer.w['self'] * topic_vec)
             seq.append(v_k)
 
-        V_p  = torch.stack(seq, 0).unsqueeze(0)        # [1,5,H]
+        V_p = torch.stack(seq, 0).unsqueeze(0)  # [1,5,H]
         eta, mu, sigma = self.generator(V_p)
         cum = self.generator.predict_cumulative(
-                  self.horizons.to(device), eta, mu, sigma)    # [1,5]
-        yearly = torch.cat([cum[:, :1], cum[:,1:] - cum[:,:-1]], 1)
-        return yearly.squeeze(0)                               # [5]
-
+            self.horizons.to(device), eta, mu, sigma
+        )  # [1,5]
+        yearly = torch.cat([cum[:, :1], cum[:, 1:] - cum[:, :-1]], 1)
+        return yearly.squeeze(0)  # [5]
 
     # -----------------------------------------------------------------
     @torch.no_grad()
@@ -317,6 +340,7 @@ class ImpactModel(nn.Module):
         """
         Evaluate in the counter-factual setting:
         use only authors + topic of each paper in test years.
+        includeing inference-time author dropping.
         """
         device    = next(self.parameters()).device
         horizons  = self.horizons.to(device)
@@ -334,6 +358,8 @@ class ImpactModel(nn.Module):
 
             paper_ids = mask.nonzero(as_tuple=False).view(-1)
             y_true    = data['paper'].y_citations[paper_ids].float()
+            if self.input_feature_model == 'drop topic':
+                topic_all = torch.zeros(y_true.size(0), self.hidden_dim, device=device)
             topic_all = encs[t]['paper'][paper_ids]
             N = y_true.size(0)
 
@@ -437,9 +463,10 @@ class ImpactModel(nn.Module):
                     row_idx = _rows_of(yr, au_list)
                     if row_idx.numel() > 0:
                         author_emb[n] = enc_dict['author'][row_idx].mean(0)
-
             # (ii) topic vector (k = 0 receives weight; past steps do not)
             topic_vec_batch = torch.stack([t[1] for t in teams]).to(device)
+            if self.input_feature_model == 'drop topic':
+                topic_vec_batch = torch.zeros_like(topic_vec_batch)
 
             v_k = ( self.imputer.w['author'] * author_emb +
                     self.imputer.w['self']   * topic_vec_batch )
