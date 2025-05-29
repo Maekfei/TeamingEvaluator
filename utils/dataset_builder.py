@@ -15,15 +15,13 @@ from tqdm import tqdm
 
 
 # ------------- paths ------------------------------------------------------
-PAPER_JSON = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/' \
-'papernodes_remove0/paper_nodes_GNN_yearly.json.gz'
-# EMB_NPZ = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/' \
-# 'tkg_embeddings_all_2024.npz'
-EMB_NPZ = 'data_examine/output_npz_openai/paper_embeddings_768_OpenAI.npz'
-# CACHE_DIR    = 'data/yearly_snapshots_specter2'          # *.pt files go here
-CACHE_DIR    = 'data/yearly_snapshots_oai'          # *.pt files go here
+PAPER_JSON = 'data/paper_nodes_GNN_yearly.json.gz'
+EMB_NPZ = 'data/tkg_embeddings_all_2024.npz'
+# EMB_NPZ = 'data_examine/output_npz_openai/paper_embeddings_768_OpenAI.npz'
+CACHE_DIR    = 'data/yearly_snapshots_specter2'          # *.pt files go here
+# CACHE_DIR    = 'data/yearly_snapshots_oai'          # *.pt files go here
 
-META_CACHE   = os.path.join(CACHE_DIR, 'mappings_oai.pkl')   # id ↔ idx tables
+META_CACHE   = os.path.join(CACHE_DIR, 'mappings_specter2.pkl')   # id ↔ idx tables
 
 # ------------- load the paper JSON file ---------------------------------
 print('[dataset_builder] loading paper JSON …')
@@ -163,7 +161,8 @@ def build_snapshot(up_to_year: int, L: int = 5) -> HeteroData:
             dest[idx] = torch.tensor(vec, dtype=dest.dtype)
         except Exception as e:
             print(f'[warn] could not copy embedding row {idx}: {e}')
-    EMB_DIR = '/data/jx4237data/GNNteamingEvaluator/TeamingEvaluator/data_examine/output_embeddings_yearly_oai'
+    # EMB_DIR = '/data/jx4237data/GNNteamingEvaluator/TeamingEvaluator/data_examine/output_embeddings_yearly_oai'
+    EMB_DIR = '/data/output_embeddings_yearly_specter2'
     fn_author = os.path.join(EMB_DIR, f'author_embedding_{up_to_year}.json')
     if os.path.isfile(fn_author):
         for aid, vec in json.load(open(fn_author)).items():
