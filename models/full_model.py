@@ -289,7 +289,6 @@ class ImpactModel(nn.Module):
                 author_ids = [author_ids[0]]
             elif mode == 'keep_last' and len(author_ids) >= 1:
                 author_ids = [author_ids[-1]]
-            # if mode is None or invalid, keep all authors as-is
 
         # ------------- helper to translate raw ids to row indices -----
         idx_cache: dict[int, torch.Tensor] = {}
@@ -318,7 +317,9 @@ class ImpactModel(nn.Module):
                     auth_emb = torch.zeros(self.hidden_dim, device=device)
                 else:
                     enc_dict = self.encoder(snapshots[yr])
-                    auth_emb = enc_dict['author'][ids].mean(0)
+                    # auth_emb = enc_dict['author'][ids].mean(0)
+                    auth_emb = torch.zeros(self.hidden_dim, device=device)
+                    # print(f'Using author embedding for year {yr}, the author embedding is {auth_emb}')
             else:
                 auth_emb = torch.zeros(self.hidden_dim, device=device)
 

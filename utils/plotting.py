@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
 import os
+import torch
 
 # ───────────────────────────────────────────────────────────────────
 # plotting helper  (now with save_path)
@@ -15,19 +16,22 @@ import os
 def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
                                         y_pred: np.ndarray,
                                         horizons=None,
-                                        bins: int = 2,
+                                        bins: int = 30,
+                                        plot_type: str = "kde",
                                         confidence_level: float = 0.95,
                                         n_bootstrap: int = 100,
                                         save_path: str | None = None,
                                         show: bool = True):
     """
-    Creates 1×L panel of KDE plots comparing prediction vs. truth with confidence intervals.
+    Creates 1×L panel of KDE plots or histograms comparing prediction vs. truth with confidence intervals.
+    Uses log-transformed x-axis: log1p(x + 1.0)
 
     Parameters
     ----------
     y_true, y_pred : array shape (N, L)
     horizons       : list/tuple of length L with axis titles
-    bins           : histogram bin count (not used with KDE but kept for compatibility)
+    bins           : histogram bin count (used when plot_type="hist")
+    plot_type      : "kde" for kernel density estimation or "hist" for histogram
     confidence_level : confidence level for intervals (default 0.95)
     n_bootstrap    : number of bootstrap samples for confidence intervals
     save_path      : if given, the figure is written to that file
@@ -48,20 +52,45 @@ def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
     for h in range(L):
         ax = axes[h]
         
-        # Plot main KDE
-        sns.kdeplot(y_true[:, h], ax=ax, label="True", color='tab:blue')
-        sns.kdeplot(y_pred[:, h], ax=ax, label="Pred", color='tab:orange')
+        # Transform data using log1p(x + 1.0)
+        y_true_transformed = torch.log1p(torch.tensor(y_true[:, h]) + 1.0).numpy()
+        y_pred_transformed = torch.log1p(torch.tensor(y_pred[:, h]) + 1.0).numpy()
+        
+        if plot_type.lower() == "kde":
+            # Plot main KDE on transformed data
+            sns.kdeplot(y_true_transformed, ax=ax, label="True", color='tab:blue')
+            sns.kdeplot(y_pred_transformed, ax=ax, label="Pred", color='tab:orange')
+        elif plot_type.lower() == "hist":
+            # Plot histograms on transformed data
+            ax.hist(y_true_transformed, bins=bins, alpha=0.6, label="True", 
+                   color='tab:blue', density=True, edgecolor='black', linewidth=0.5)
+            ax.hist(y_pred_transformed, bins=bins, alpha=0.6, label="Pred", 
+                   color='tab:orange', density=True, edgecolor='black', linewidth=0.5)
+        else:
+            raise ValueError("plot_type must be either 'kde' or 'hist'")
         
         # Add confidence intervals using bootstrap
-        x_range = np.linspace(0, 20, 200)
+        # Define x_range in transformed space
+        max_val = max(np.max(y_true_transformed), np.max(y_pred_transformed))
+        min_val = min(np.min(y_true_transformed), np.min(y_pred_transformed))
+        x_range = np.linspace(min_val, max_val, 200)
         
         # Bootstrap for true data
         true_densities = []
         for _ in range(n_bootstrap):
             # Bootstrap sample
-            bootstrap_sample = np.random.choice(y_true[:, h], size=len(y_true[:, h]), replace=True)
-            kde = stats.gaussian_kde(bootstrap_sample)
-            true_densities.append(kde(x_range))
+            bootstrap_sample = np.random.choice(y_true_transformed, size=len(y_true_transformed), replace=True)
+            if plot_type.lower() == "kde":
+                kde = stats.gaussian_kde(bootstrap_sample)
+                true_densities.append(kde(x_range))
+            elif plot_type.lower() == "hist":
+                # For histograms, compute density using numpy histogram
+                hist_counts, hist_edges = np.histogram(bootstrap_sample, bins=bins, 
+                                                     range=(min_val, max_val), density=True)
+                # Interpolate histogram to x_range
+                hist_centers = (hist_edges[:-1] + hist_edges[1:]) / 2
+                interpolated = np.interp(x_range, hist_centers, hist_counts)
+                true_densities.append(interpolated)
         
         true_densities = np.array(true_densities)
         true_lower = np.percentile(true_densities, 100 * alpha/2, axis=0)
@@ -70,9 +99,18 @@ def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
         # Bootstrap for predicted data
         pred_densities = []
         for _ in range(n_bootstrap):
-            bootstrap_sample = np.random.choice(y_pred[:, h], size=len(y_pred[:, h]), replace=True)
-            kde = stats.gaussian_kde(bootstrap_sample)
-            pred_densities.append(kde(x_range))
+            bootstrap_sample = np.random.choice(y_pred_transformed, size=len(y_pred_transformed), replace=True)
+            if plot_type.lower() == "kde":
+                kde = stats.gaussian_kde(bootstrap_sample)
+                pred_densities.append(kde(x_range))
+            elif plot_type.lower() == "hist":
+                # For histograms, compute density using numpy histogram
+                hist_counts, hist_edges = np.histogram(bootstrap_sample, bins=bins, 
+                                                     range=(min_val, max_val), density=True)
+                # Interpolate histogram to x_range
+                hist_centers = (hist_edges[:-1] + hist_edges[1:]) / 2
+                interpolated = np.interp(x_range, hist_centers, hist_counts)
+                pred_densities.append(interpolated)
         
         pred_densities = np.array(pred_densities)
         pred_lower = np.percentile(pred_densities, 100 * alpha/2, axis=0)
@@ -85,13 +123,11 @@ def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
                        label=f"Pred {confidence_level:.0%} CI")
         
         ax.set_title(horizons[h])
-        ax.set_xlabel("Citation count in year")
+        ax.set_xlabel("log1p(Citation count + 1)")
         ax.set_ylabel("Density")
-        ax.set_xlim(0, 20)
-        ax.set_ylim(0, 0.35)
         ax.legend()
 
-    fig.suptitle("Predicted vs. True citation-count distributions with Confidence Intervals", fontsize=16)
+    fig.suptitle("Predicted vs. True citation-count distributions with Confidence Intervals (Log-transformed)", fontsize=16)
     fig.tight_layout()
 
     if save_path is not None:
