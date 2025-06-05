@@ -81,7 +81,7 @@ def main():
     # choose one of the two
     parser.add_argument("--input_feature_model", choices=['all features', 'drop topic'], default='all features',
                         help="Input feature model to use. Choose one of the two: 'all features' or 'drop topic'.")
-    parser.add_argument("--inference_time_author_dropping", type=bool, default=False,
+    parser.add_argument("--inference_time_author_dropping", type=str, default=False,
                         help="Whether to drop authors from the training set. Default is False.")
     parser.add_argument("--inference_time_num_author_dropping_k", type=int, default=0,
                         help="Number of authors to drop from the training set. Default is 0.")
@@ -226,8 +226,9 @@ def main():
                     y_true.numpy(),                   # expects numpy
                     y_predict.numpy(),
                     horizons=[f"Year {i}" for i in range(5)],
-                    bins=40,
-                    save_path="./figs/ours_dist_all_years_ci.png",
+                    bins=100,
+                    plot_type="hist",
+                    save_path="./figs/ours_dist_all_years_ci_hist.png",
                     show=False)
                 
                 plot_yearly_aggregates(

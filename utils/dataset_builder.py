@@ -15,13 +15,19 @@ from tqdm import tqdm
 
 
 # ------------- paths ------------------------------------------------------
-PAPER_JSON = 'data/paper_nodes_GNN_yearly.json.gz'
-EMB_NPZ = 'data/tkg_embeddings_all_2024.npz'
-# EMB_NPZ = 'data_examine/output_npz_openai/paper_embeddings_768_OpenAI.npz'
-CACHE_DIR    = 'data/yearly_snapshots_specter2'          # *.pt files go here
+# PAPER_JSON = 'data/paper_nodes_GNN_yearly.json.gz'
+PAPER_JSON = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/papernodes_remove0/paper_nodes_GNN_yearly_9_year_citation_counts.json.gz'
+EMB_NPZ = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/' \
+'tkg_embeddings_all_2024.npz'
+# # EMB_NPZ = 'data_examine/output_npz_openai/paper_embeddings_768_OpenAI.npz'
+# CACHE_DIR    = 'data/yearly_snapshots_specter2'          # *.pt files go here
 # CACHE_DIR    = 'data/yearly_snapshots_oai'          # *.pt files go here
 
-META_CACHE   = os.path.join(CACHE_DIR, 'mappings_specter2.pkl')   # id ↔ idx tables
+CACHE_DIR    = 'data/yearly_snapshots_specter2_starting_from_year_1'          # *.pt files go here
+
+
+
+META_CACHE   = os.path.join(CACHE_DIR, 'mappings_specter2_starting_from_year_1.pkl')   # id ↔ idx tables
 
 # ------------- load the paper JSON file ---------------------------------
 print('[dataset_builder] loading paper JSON …')
@@ -141,8 +147,8 @@ def build_snapshot(up_to_year: int, L: int = 5) -> HeteroData:
         if row is not None:
             x_paper[p] = torch.from_numpy(emb_matrix[row])
 
-        for l in range(1, L + 1):
-            y_cit[p, l-1] = node['features'].get(f'yearly_citation_count_{l}', 0)
+        for l in range(2, L + 1): # change here to starting from the year after the publication year from (1, L + 1) to (2, L + 2) , L = 5
+            y_cit[p, l-2] = node['features'].get(f'yearly_citation_count_{l}', 0)
 
         is_core[p] = True
         y_year[p]  = node['features']['PubYear']
