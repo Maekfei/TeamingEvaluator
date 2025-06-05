@@ -66,7 +66,7 @@ def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
         true_densities = np.array(true_densities)
         true_lower = np.percentile(true_densities, 100 * alpha/2, axis=0)
         true_upper = np.percentile(true_densities, 100 * (1 - alpha/2), axis=0)
-        
+
         # Bootstrap for predicted data
         pred_densities = []
         for _ in range(n_bootstrap):
@@ -84,6 +84,8 @@ def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
         ax.fill_between(x_range, pred_lower, pred_upper, alpha=0.3, color='tab:orange',
                        label=f"Pred {confidence_level:.0%} CI")
         
+        exit()
+
         ax.set_title(horizons[h])
         ax.set_xlabel("Citation count in year")
         ax.set_ylabel("Density")

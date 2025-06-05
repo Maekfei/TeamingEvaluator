@@ -66,17 +66,17 @@ def main():
     parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
     parser.add_argument("--lr", type=float, default=3*1e-2)
     parser.add_argument("--beta", type=float, default=.5) # regularization parameter
-    parser.add_argument("--device", default="cuda:7" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--cold_start_prob", type=float, default=0.3,
                         help="probability that a training paper is treated as "
                              "venue/reference-free (cold-start calibration)")
     parser.add_argument("--eval_mode", choices=["paper", "team"], default="paper",
                         help="'paper' = original evaluation  |  'team' = counter-factual")
 
-    parser.add_argument("--load_checkpoint", type=str, default=None,
+    parser.add_argument("--load_checkpoint", type=str, default="runs/20250529_154335_team/evaluated_model_epoch760_male0_0.6843_male1_0.8050_male2_0.7513_male3_0.7142_male4_0.6158_team.pt",
                         help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
-    parser.add_argument("--training_off", type=int, default=0,
-                    help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
+    parser.add_argument("--training_off", type=bool, default=True,
+                    help="Whether to disable the training (if training_off is True, then we directly evaluate).")
     # ['all features', 'drop toic']
     # choose one of the two
     parser.add_argument("--input_feature_model", choices=['all features', 'drop topic'], default='all features',
@@ -111,7 +111,8 @@ def main():
         console.print(f"[bold]Test years:[/bold]  {test_years}")
         console.print(f"[bold]Device:[/bold] {args.device}")
         
-        snapshots = load_snapshots("data/yearly_snapshots_specter2/G_{}.pt", train_years + test_years)
+        # snapshots = load_snapshots("data/yearly_snapshots_specter2/G_{}.pt", train_years + test_years)
+        snapshots = load_snapshots("data/yearly_snapshots_specter2_starting_from_year_1/G_{}.pt", train_years + test_years)
         snapshots = [g.to(args.device) for g in snapshots]
         
         author_raw_ids = snapshots[-1]['author'].raw_ids          # list[str]
@@ -137,7 +138,7 @@ def main():
         optimizer = Adam(model.parameters(), lr=args.lr)
 
         start_epoch = 1
-        loaded_checkpoint_args_info = "None"  
+        loaded_checkpoint_args_info = "None"
 
         if args.load_checkpoint:
             if os.path.exists(args.load_checkpoint):
