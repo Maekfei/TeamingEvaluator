@@ -168,18 +168,25 @@ def build_snapshot(up_to_year: int, L: int = 5) -> HeteroData:
         except Exception as e:
             print(f'[warn] could not copy embedding row {idx}: {e}')
     # EMB_DIR = '/data/jx4237data/GNNteamingEvaluator/TeamingEvaluator/data_examine/output_embeddings_yearly_oai'
-    EMB_DIR = '/data/output_embeddings_yearly_specter2'
+    EMB_DIR = '/data/jx4237data/GNNteamingEvaluator/TeamingEvaluator/data_examine/SPECTER2_yearly_author_venue_embeddings'
     fn_author = os.path.join(EMB_DIR, f'author_embedding_{up_to_year}.json')
+    if not os.path.isfile(fn_author):
+        fn_author += '.gz'
     if os.path.isfile(fn_author):
-        for aid, vec in json.load(open(fn_author)).items():
-            if aid in AUTH_LIDX_OF:
-                _copy(AUTH_LIDX_OF[aid], vec, x_author)
+        with (gzip.open(fn_author, 'rt') if fn_author.endswith('.gz') else open(fn_author)) as f:
+            for aid, vec in json.load(f).items():
+                if aid in AUTH_LIDX_OF:
+                    _copy(AUTH_LIDX_OF[aid], vec, x_author)
+        print(f'[dataset_builder]   ⇒ loaded {len(AUTH_LIDX_OF)} author embeddings from {fn_author}')
 
-    fn_venue  = os.path.join(EMB_DIR, f'venue_embedding_{up_to_year}.json')
+    fn_venue = os.path.join(EMB_DIR, f'venue_embedding_{up_to_year}.json')
+    if not os.path.isfile(fn_venue):
+        fn_venue += '.gz'
     if os.path.isfile(fn_venue):
-        for ven, vec in json.load(open(fn_venue)).items():
-            if ven in VEN_LIDX_OF:
-                _copy(VEN_LIDX_OF[ven], vec, x_venue)
+        with (gzip.open(fn_venue, 'rt') if fn_venue.endswith('.gz') else open(fn_venue)) as f:
+            for ven, vec in json.load(f).items():
+                if ven in VEN_LIDX_OF:
+                    _copy(VEN_LIDX_OF[ven], vec, x_venue)
 
     data['author'].x = x_author
     data['venue' ].x = x_venue

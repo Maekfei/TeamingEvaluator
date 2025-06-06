@@ -64,7 +64,7 @@ def main():
     parser.add_argument("--hidden_dim", type=int, default=50)
     parser.add_argument("--epochs", type=int, default=150, help="Total number of epochs to train for.")
     parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
-    parser.add_argument("--lr", type=float, default=3*1e-2)
+    parser.add_argument("--lr", type=float, default=1e-2)
     parser.add_argument("--beta", type=float, default=.5) # regularization parameter
     parser.add_argument("--device", default="cuda:7" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--cold_start_prob", type=float, default=0.3,

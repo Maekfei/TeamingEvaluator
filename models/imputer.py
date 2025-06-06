@@ -7,12 +7,19 @@ class WeightedImputer(nn.Module):
     v_{p,t} = Σ_m  w_m  ·  mean_{i∈N_p,t^m} u_{i,t}
     One scalar weight per metadata type (author, venue, reference, …).
     """
-    def __init__(self, meta_types): # meta_types: list of metadata types (e.g. ['author', 'venue'])
+    def __init__(self, meta_types, hidden_dim): # meta_types: list of metadata types (e.g. ['author', 'venue'])
         super().__init__()
+        self.hidden_dim = hidden_dim
         self.w = nn.ParameterDict({
             m: nn.Parameter(torch.tensor(1.0)) for m in meta_types
         })
         self.w['self'] = nn.Parameter(torch.tensor(1.0))
+        self.author_attention = nn.Sequential(
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim // 2, 1),
+            nn.Softmax(dim=0)
+        )
 
     @staticmethod
     def collect_neighbours(data, paper_id: int, device):
@@ -49,7 +56,27 @@ class WeightedImputer(nn.Module):
     # ======================================================================
 
 
-
+    def aggregate_authors_with_attention(self, author_embeddings):
+        """
+        Apply attention mechanism to aggregate author embeddings.
+        
+        Args:
+            author_embeddings: Tensor [num_authors, hidden_dim]
+            
+        Returns:
+            Tensor [hidden_dim] - attention-weighted author representation
+        """
+        if author_embeddings.size(0) == 1:
+            # Single author, no need for attention
+            return author_embeddings.squeeze(0)
+        
+        # Compute attention weights for each author
+        attention_weights = self.author_attention(author_embeddings)  # [num_authors, 1]
+        
+        # Apply attention weights and sum
+        weighted_authors = (author_embeddings * attention_weights).sum(dim=0)  # [hidden_dim]
+        
+        return weighted_authors
 
     def forward(
         self,
@@ -101,7 +128,13 @@ class WeightedImputer(nn.Module):
             ids = ids[ids < embs[ntype].size(0)]
             if ids.numel() == 0:
                 continue
-            parts.append(self.w[ntype] * embs[ntype][ids].mean(dim=0))
+            if ntype == 'author':
+                # Use attention mechanism for authors
+                author_embeddings = embs[ntype][ids]  # [num_authors, hidden_dim]
+                aggregated_authors = self.aggregate_authors_with_attention(author_embeddings)
+                parts.append(self.w[ntype] * aggregated_authors)
+            else:
+                parts.append(self.w[ntype] * embs[ntype][ids].mean(dim=0))
 
         # --- add the paper’s own embedding --------------------------------
         if topic_vec is not None:

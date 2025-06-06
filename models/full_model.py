@@ -30,7 +30,7 @@ class ImpactModel(nn.Module):
     ):
         super().__init__()
         self.encoder = RGCNEncoder(metadata, in_dims, hidden_dim) # output: keys ('author', 'paper', 'venue'), values: embeddings. (num_nodes_of_that_type, hidden_dim)
-        self.imputer = WeightedImputer(meta_types) # impute to update the new paper embedding.
+        self.imputer = WeightedImputer(meta_types, hidden_dim) # impute to update the new paper embedding.
         self.generator = ImpactRNN(hidden_dim)
         self.beta = beta
         self.hidden_dim = hidden_dim
@@ -303,7 +303,6 @@ class ImpactModel(nn.Module):
             idx_cache[year] = out
             return out
         # --------------------------------------------------------------
-
         seq = []
         for offset in range(self.history - 1, -1, -1):
             yr = current_year_idx - offset
@@ -317,9 +316,13 @@ class ImpactModel(nn.Module):
                     auth_emb = torch.zeros(self.hidden_dim, device=device)
                 else:
                     enc_dict = self.encoder(snapshots[yr])
-                    # auth_emb = enc_dict['author'][ids].mean(0)
-                    auth_emb = torch.zeros(self.hidden_dim, device=device)
-                    # print(f'Using author embedding for year {yr}, the author embedding is {auth_emb}')
+                    # print(enc_dict)
+                    # Use attention mechanism instead of simple mean
+                    auth_embs = enc_dict['author'][ids]  # [num_authors, hidden_dim]
+                    
+                    auth_emb = self.imputer.aggregate_authors_with_attention(auth_embs)
+                    
+
             else:
                 auth_emb = torch.zeros(self.hidden_dim, device=device)
 
@@ -463,14 +466,17 @@ class ImpactModel(nn.Module):
                 for n, (au_list, _) in enumerate(teams):
                     row_idx = _rows_of(yr, au_list)
                     if row_idx.numel() > 0:
-                        author_emb[n] = enc_dict['author'][row_idx].mean(0)
-            # (ii) topic vector (k = 0 receives weight; past steps do not)
+                        # Use attention mechanism instead of simple mean
+                        author_embs = enc_dict['author'][row_idx]  # [num_authors, hidden_dim]
+                        author_emb[n] = self.imputer.aggregate_authors_with_attention(author_embs)
+
+            # (ii) topic vector (rest remains the same)
             topic_vec_batch = torch.stack([t[1] for t in teams]).to(device)
             if self.input_feature_model == 'drop topic':
                 topic_vec_batch = torch.zeros_like(topic_vec_batch)
 
-            v_k = ( self.imputer.w['author'] * author_emb +
-                    self.imputer.w['self']   * topic_vec_batch )
+            v_k = (self.imputer.w['author'] * author_emb +
+                self.imputer.w['self'] * topic_vec_batch)
             seq_steps.append(v_k)
 
         V_p = torch.stack(seq_steps, dim=1)                 # [N, 5, H]
