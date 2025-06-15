@@ -40,7 +40,7 @@ class ImpactRNN(nn.Module):
 
         # global α  (detached buffer)
         self.register_buffer("alpha", torch.tensor(math.e))   # ≈ 2.718
-
+        
     # ----------------------------------------------------------------------
     def forward(self, seq):               # seq: [B, T, hidden_dim]
         _, h_n = self.gru(seq)            # h_n: [num_layers, B, H]
@@ -49,6 +49,14 @@ class ImpactRNN(nn.Module):
         eta   = self.head_eta(z).squeeze(-1)                   # [B]
         mu    = self.head_mu(z).squeeze(-1)                    # [B]
         sigma = torch.relu(self.head_sigma(z)).squeeze(-1) + 1e-6  # >0
+
+        # Debug prints
+        if torch.isnan(eta).any() or torch.isnan(mu).any() or torch.isnan(sigma).any():
+            print("NaN detected in ImpactRNN forward pass:")
+            print(f"eta stats: min={eta.min().item():.3f}, max={eta.max().item():.3f}, mean={eta.mean().item():.3f}")
+            print(f"mu stats: min={mu.min().item():.3f}, max={mu.max().item():.3f}, mean={mu.mean().item():.3f}")
+            print(f"sigma stats: min={sigma.min().item():.3f}, max={sigma.max().item():.3f}, mean={sigma.mean().item():.3f}")
+            print(f"z stats: min={z.min().item():.3f}, max={z.max().item():.3f}, mean={z.mean().item():.3f}")
 
         return eta, mu, sigma
 
@@ -75,4 +83,14 @@ class ImpactRNN(nn.Module):
         x = (torch.log(l).view(1, L) - mu.view(B, 1)) / sigma.view(B, 1)
         phi = self._phi(x)
         out = self.alpha * (torch.exp(eta.view(B, 1) * phi) - 1.0)
+
+        # Debug prints
+        if torch.isnan(out).any():
+            print("NaN detected in predict_cumulative:")
+            print(f"x stats: min={x.min().item():.3f}, max={x.max().item():.3f}, mean={x.mean().item():.3f}")
+            print(f"phi stats: min={phi.min().item():.3f}, max={phi.max().item():.3f}, mean={phi.mean().item():.3f}")
+            print(f"eta*phi stats: min={(eta.view(B, 1) * phi).min().item():.3f}, max={(eta.view(B, 1) * phi).max().item():.3f}")
+            print(f"exp(eta*phi) stats: min={torch.exp(eta.view(B, 1) * phi).min().item():.3f}, max={torch.exp(eta.view(B, 1) * phi).max().item():.3f}")
+            print(f"out stats: min={out.min().item():.3f}, max={out.max().item():.3f}, mean={out.mean().item():.3f}")
+
         return out

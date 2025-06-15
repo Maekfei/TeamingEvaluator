@@ -147,7 +147,7 @@ def build_snapshot(up_to_year: int, L: int = 5) -> HeteroData:
         if row is not None:
             x_paper[p] = torch.from_numpy(emb_matrix[row])
 
-        for l in range(2, L + 1): # change here to starting from the year after the publication year from (1, L + 1) to (2, L + 2) , L = 5
+        for l in range(2, L + 2): # change here to starting from the year after the publication year from (1, L + 1) to (2, L + 2) , L = 5
             y_cit[p, l-2] = node['features'].get(f'yearly_citation_count_{l}', 0)
 
         is_core[p] = True

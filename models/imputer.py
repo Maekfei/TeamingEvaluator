@@ -20,7 +20,7 @@ class WeightedImputer(nn.Module):
             nn.Linear(hidden_dim // 2, 1),
             nn.Softmax(dim=0)
         )
-
+        
     @staticmethod
     def collect_neighbours(data, paper_id: int, device):
         """
@@ -52,9 +52,6 @@ class WeightedImputer(nn.Module):
             neighbours['paper'] = dst.index_select(0, mask)
 
         return neighbours
-    # ======================================================================
-    # ======================================================================
-
 
     def aggregate_authors_with_attention(self, author_embeddings):
         """
@@ -136,7 +133,7 @@ class WeightedImputer(nn.Module):
             else:
                 parts.append(self.w[ntype] * embs[ntype][ids].mean(dim=0))
 
-        # --- add the paper’s own embedding --------------------------------
+        # --- add the paper's own embedding --------------------------------
         if topic_vec is not None:
             parts.append(self.w['self'] * topic_vec)
         

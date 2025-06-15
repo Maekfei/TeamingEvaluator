@@ -85,8 +85,11 @@ class ImpactModel(nn.Module):
             if l_time_ntype:
                 l_time.append(torch.stack(l_time_ntype).mean())
 
-        l_time = (torch.stack(l_time).mean()
-                if l_time else torch.tensor(0.0, device=embeddings[0]['paper'].device))
+        # Handle l_time properly
+        if l_time:  # If we have any temporal losses
+            l_time = torch.stack(l_time).mean()
+        else:
+            l_time = torch.tensor(0.0, device=embeddings[0]['paper'].device)
 
         # -------- prediction loss over all new papers ----------------
         l_pred = []
@@ -162,8 +165,22 @@ class ImpactModel(nn.Module):
                 dim=1,
             )
 
-            loss = ((torch.log1p(y_true + self.eps) -
+            # Debug prints for loss calculation
+            if torch.isnan(y_true).any() or torch.isnan(y_hat).any():
+                print("NaN detected in loss calculation:")
+                print(f"y_true stats: min={y_true.min().item():.3f}, max={y_true.max().item():.3f}, mean={y_true.mean().item():.3f}")
+                print(f"y_hat stats: min={y_hat.min().item():.3f}, max={y_hat.max().item():.3f}, mean={y_hat.mean().item():.3f}")
+                print(f"log1p(y_true) stats: min={torch.log1p(y_true).min().item():.3f}, max={torch.log1p(y_true).max().item():.3f}")
+                print(f"log1p(y_hat) stats: min={torch.log1p(y_hat).min().item():.3f}, max={torch.log1p(y_hat).max().item():.3f}")
+
+            loss = ((torch.log1p(y_true) -
                      torch.log1p(y_hat)) ** 2).mean()
+            
+            if torch.isnan(loss):
+                print("NaN detected in final loss:")
+                print(f"loss value: {loss.item()}")
+                print(f"y_true shape: {y_true.shape}, y_hat shape: {y_hat.shape}")
+            
             l_pred.append(loss)
 
         l_pred = torch.stack(l_pred).mean()

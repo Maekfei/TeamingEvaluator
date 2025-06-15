@@ -61,13 +61,13 @@ def main():
     parser.add_argument("--train_years", nargs=2, type=int, required=True,
                         help="e.g. 1995 2004 inclusive, the yeas to train on")
     parser.add_argument("--test_years", nargs=2, type=int, required=True)
-    parser.add_argument("--hidden_dim", type=int, default=50)
-    parser.add_argument("--epochs", type=int, default=150, help="Total number of epochs to train for.")
+    parser.add_argument("--hidden_dim", type=int, default=64)
+    parser.add_argument("--epochs", type=int, default=240, help="Total number of epochs to train for.")
     parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
-    parser.add_argument("--lr", type=float, default=1e-2)
+    parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--beta", type=float, default=.5) # regularization parameter
-    parser.add_argument("--device", default="cuda:7" if torch.cuda.is_available() else "cpu")
-    parser.add_argument("--cold_start_prob", type=float, default=0.3,
+    parser.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--cold_start_prob", type=float, default=0.5,
                         help="probability that a training paper is treated as "
                              "venue/reference-free (cold-start calibration)")
     parser.add_argument("--eval_mode", choices=["paper", "team"], default="paper",
@@ -111,7 +111,7 @@ def main():
         console.print(f"[bold]Test years:[/bold]  {test_years}")
         console.print(f"[bold]Device:[/bold] {args.device}")
         
-        snapshots = load_snapshots("data/yearly_snapshots_specter2/G_{}.pt", train_years + test_years)
+        snapshots = load_snapshots("data/yearly_snapshots_specter2_starting_from_year_1/G_{}.pt", train_years + test_years)
         snapshots = [g.to(args.device) for g in snapshots]
         
         author_raw_ids = snapshots[-1]['author'].raw_ids          # list[str]
@@ -256,7 +256,7 @@ def main():
             log_items_str = "  ".join(f"{k}:{v:.4f}" for k, v in log.items())
             console.log(f"Epoch {epoch:03d}  Loss: {loss.item():.4f}  {log_items_str}")
 
-            if epoch % 20 == 0 or epoch == args.epochs:
+            if epoch % 50 == 0 or epoch == args.epochs:
                 model.eval()
                 with torch.no_grad():
                     current_male_values = None
@@ -284,8 +284,7 @@ def main():
                     console.print(f"[green]Eval Epoch {epoch:03d} ({args.eval_mode})[/green] "
                                   f"MALE {current_male_values}  RMSLE {current_rmsle_values} MAPE {mape}")
 
-                    if loss is not None: 
-                        save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values, current_rmsle_values, args, loss.item(), run_dir, console)
+                    save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values, current_rmsle_values, args, loss.item(), run_dir, console)
 
                     if current_male_values and len(current_male_values) > 0:
                         metric_to_track = float(current_male_values[0])  
