@@ -82,8 +82,7 @@ def load_or_init_mappings():
 
     return paper2idx, aut2idx, ven2idx
 
-
-PAPER2IDX, AUT2IDX, VEN2IDX = load_or_init_mappings()
+PAPER2IDX, AUT2IDX, VEN2IDX = load_or_init_mappings() # this line is not used in the code
 
 ACTIVE_PAPERS  : list[str] = []
 ACTIVE_AUTHS   : list[str] = []
@@ -99,7 +98,7 @@ def _assign_local_id(gid2lidx: dict, active_list: list, gid: str | int):
     Helper – gives every *global* node id a *local* contiguous index
     that never changes once it has been assigned.
     """
-    if gid not in gid2lidx:
+    if gid not in gid2lidx: # global id to local id mapping
         gid2lidx[gid] = len(active_list)
         active_list.append(gid)
     return gid2lidx[gid]
@@ -115,9 +114,8 @@ def build_snapshot(up_to_year: int, L: int = 5) -> HeteroData:
                  if n['features']['is_core'] == 1
                  and n['features']['PubYear'] <= up_to_year]
 
-    for pid in sorted(paper_ids, key=lambda p: PAPER2IDX[p]):   # deterministic
+    for pid in sorted(paper_ids, key=lambda p: PAPER2IDX[p]):
         _assign_local_id(PAPER_LIDX_OF, ACTIVE_PAPERS, pid)
-
         n = paper_json[pid]
         for aid in n['neighbors']['author']:
             _assign_local_id(AUTH_LIDX_OF,  ACTIVE_AUTHS,  aid)
@@ -148,7 +146,7 @@ def build_snapshot(up_to_year: int, L: int = 5) -> HeteroData:
             x_paper[p] = torch.from_numpy(emb_matrix[row])
 
         for l in range(2, L + 2): # change here to starting from the year after the publication year from (1, L + 1) to (2, L + 2) , L = 5
-            y_cit[p, l-2] = node['features'].get(f'yearly_citation_count_{l}', 0)
+            y_cit[p, l-2] = node['features'].get(f'yearly_citation_count_{l}', 0)# skip the first year
 
         is_core[p] = True
         y_year[p]  = node['features']['PubYear']

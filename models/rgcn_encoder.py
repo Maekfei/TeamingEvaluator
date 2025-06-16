@@ -15,7 +15,7 @@ class RGCNEncoder(nn.Module):
         self,
         metadata: Dict,
         in_dims: Dict[str, int],
-        hidden_dim: int = 128,
+        hidden_dim: int = 32,
         num_layers: int = 2,
         dropout: float = 0.1,
     ):

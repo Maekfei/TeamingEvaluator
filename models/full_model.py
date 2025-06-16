@@ -12,14 +12,14 @@ class ImpactModel(nn.Module):
         J = L_pred  +  β Σ_t L_time(t,t+1)
     where L_pred is the prediction loss and L_time(t,t+1) is the temporal
     smoothing regulariser.
-    β  controls the degree of temporal smoothing.
+    β  controls the degree of temporal smoothing. # Beta is 0 in current implementation.
     """
     def __init__(
         self,
         metadata,
         in_dims,
-        hidden_dim=128,
-        beta=.5, # regularization parameter (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
+        hidden_dim=32,
+        beta=0, # regularization parameter (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
         horizons=(1, 2, 3, 4, 5), # [1, 2, 3, 4, 5] yearly citation counts
         meta_types: tuple[str, ...] = ("author", "venue", "paper"),
         cold_start_prob=0.0,
@@ -48,7 +48,7 @@ class ImpactModel(nn.Module):
         """
         Train forward pass iterating over years in years_train.
         snapshots : list[HeteroData] aligned with chronological order.
-        years_train: iterable of indices (ints)
+        years_train: iterable of indices (ints), starting from 5, as we are using 5 years before the training set for the imputer.
         start_year : int, first year in the training set.
         Returns:
             loss  (scalar)
@@ -63,13 +63,13 @@ class ImpactModel(nn.Module):
         for data in snapshots: # need multiple years for the imputer
             embeddings.append(self.encoder(data))
         # -------- temporal smoothing regulariser -------------------- # make sure the same papers, authors, venues are not too different in the two consecutive years
-        train_idxs = set(years_train)
+        train_idxs = set([0, 1, 2, 3, 4] + years_train) # 0, 1, 2, 3, 4 are the 5 years before the training set, we need to regularize them.
+        # we are not using this regularization for now, as it is not very helpful.
         l_time = []
         node_types_to_regularize = ['paper', 'author', 'venue']  # Add other node types if needed
-
         for ntype in node_types_to_regularize:
             l_time_ntype = []
-            for t in years_train:            
+            for t in [0, 1, 2, 3, 4] + years_train:            
                 if (t - 1) not in train_idxs:   
                     continue
                 emb_t = embeddings[t]    [ntype]
@@ -93,10 +93,10 @@ class ImpactModel(nn.Module):
 
         # -------- prediction loss over all new papers ----------------
         l_pred = []
-        for t in years_train: # year t.
+        for t in years_train: # year t. start from 5, as we are using 5 years before the training set for the imputer.
             data = snapshots[t]
-            year_actual = start_year + t
-            mask = (data['paper'].y_year == year_actual).to(device)
+            year_actual = start_year + t - 5 # 5 is the first year of the training data
+            mask = (data['paper'].y_year == year_actual).to(device) # only use current year's papers for training
             if mask.sum() == 0:           # nothing to train / evaluate for that year
                 continue
 
@@ -128,30 +128,26 @@ class ImpactModel(nn.Module):
             # ----------------------------------------------------------
             # 3.2 build sequence  [t-1, …, t-history]
             # ----------------------------------------------------------
+
+
+            # Need to check the logic below, we need to update this part.
             seq_steps = []
-            for k in range(self.history): # k = 0 … 4
-                if k == 0:
-                    # step-0  : the current year, topic only  (no neighbours ⇒ no leakage), if drop topic, then all zeros
-                    seq_k = topic_all                             # [N,H]
-                else:
-                    yr = t - k                                        # t-1 … t- 4
-                    if yr < 0:                                        # before data starts
-                        seq_k = torch.zeros(N, self.hidden_dim, device=device)
-                    else:
-                        seq_k = torch.stack([
-                                            self.imputer(
-                                                None,                        # paper_id not needed
-                                                yr,
-                                                snapshots,
-                                                embeddings,
-                                                predefined_neigh = neigh_cache[i],
-                                                topic_vec        = topic_all[i]
-                                            )
-                                            for i in range(N)
-                                        ], dim=0)                                            # [N,H]
-                seq_steps.append(seq_k) # seq_k is a tensor of shape [N,H], from year t back to year t -4, from now to 4 years ago
-            seq_steps = seq_steps[::-1]
-            V_p = torch.stack(seq_steps, dim=1)    # [N,5,H]
+            for k in range(self.history + 1): # k = 0 … 5
+                yr = t - k                                        # t … t-5
+                seq_k = torch.stack([
+                                    self.imputer(
+                                        None,                        # paper_id not needed
+                                        yr,
+                                        snapshots,
+                                        embeddings,
+                                        predefined_neigh = neigh_cache[i],
+                                        topic_vec        = topic_all[i]
+                                    )
+                                    for i in range(N)
+                                ], dim=0)                                            # [N,H]
+            seq_steps.append(seq_k) # seq_k is a tensor of shape [N,H], from year t back to year t -5, from now to 5 years ago
+            seq_steps = seq_steps[::-1] # reverse the sequence, in a chronological order.
+            V_p = torch.stack(seq_steps, dim=1)    # [N,6,H]
 
             # 3.3 generate citation distribution -----------------------
             eta, mu, sigma = self.generator(V_p) 
@@ -208,7 +204,7 @@ class ImpactModel(nn.Module):
         males, rmsles, mapes = [], [] ,[]
         for t in years_test:
             data      = snapshots[t]
-            year_actual = start_year + t
+            year_actual = start_year + t - 5 # 5 is the first year of the training data
             mask = (data['paper'].y_year == year_actual).to(device)
             if mask.sum() == 0:           # nothing to train / evaluate for that year
                 continue
@@ -228,15 +224,9 @@ class ImpactModel(nn.Module):
 
             # 3) build 5-step sequence  (k = 0 … 4)
             seq_steps = [] # below also need updates.
-            for k in range(self.history):
-                if k == 0:                             # publication day
-                    seq_k = topic_all                  # [N,H]
-                else:
-                    yr = t - k
-                    if yr < 0:                         # before data starts
-                        seq_k = torch.zeros(N, self.hidden_dim, device=device)
-                    else:
-                        seq_k = torch.stack([
+            for k in range(self.history + 1):
+                yr = t - k
+                seq_k = torch.stack([
                                             self.imputer(
                                                 None,                        # paper_id not needed
                                                 yr,
@@ -249,12 +239,12 @@ class ImpactModel(nn.Module):
                                         ], dim=0)                               # [N,H]
                 seq_steps.append(seq_k)
             seq_steps = seq_steps[::-1]
-            V_p = torch.stack(seq_steps, dim=1)        # [N,5,H]
+            V_p = torch.stack(seq_steps, dim=1)        # [N,6,H]
 
             # 4) predict citation distribution
             eta, mu, sigma = self.generator(V_p)
             y_hat_cum = self.generator.predict_cumulative(
-                            horizons, eta, mu, sigma)              # [N,5]
+                            horizons, eta, mu, sigma)              # [N,6]
             y_hat = torch.cat([y_hat_cum[:, :1],
                                y_hat_cum[:, 1:] - y_hat_cum[:, :-1]], 1)
 
@@ -321,7 +311,7 @@ class ImpactModel(nn.Module):
             return out
         # --------------------------------------------------------------
         seq = []
-        for offset in range(self.history - 1, -1, -1):
+        for offset in range(self.history + 1, -1, -1):
             yr = current_year_idx - offset
 
             if offset == 0:
@@ -347,13 +337,13 @@ class ImpactModel(nn.Module):
                 self.imputer.w['self'] * topic_vec)
             seq.append(v_k)
 
-        V_p = torch.stack(seq, 0).unsqueeze(0)  # [1,5,H]
+        V_p = torch.stack(seq, 0).unsqueeze(0)  # [1,6,H]
         eta, mu, sigma = self.generator(V_p)
         cum = self.generator.predict_cumulative(
             self.horizons.to(device), eta, mu, sigma
-        )  # [1,5]
+        )  # [1,6]
         yearly = torch.cat([cum[:, :1], cum[:, 1:] - cum[:, :-1]], 1)
-        return yearly.squeeze(0)  # [5]
+        return yearly.squeeze(0)  # [6]
 
     # -----------------------------------------------------------------
     @torch.no_grad()
@@ -372,7 +362,7 @@ class ImpactModel(nn.Module):
         males, rmsles, mapes = [], [] ,[]
         for t in years_test:
             data = snapshots[t]
-            year_actual = start_year + t
+            year_actual = start_year + t - 5 # 5 is the first year of the training data
             mask = (data['paper'].y_year == year_actual).to(device)
             if mask.sum() == 0:           # nothing to train / evaluate for that year
                 continue
@@ -397,7 +387,7 @@ class ImpactModel(nn.Module):
             for i, d in enumerate(neigh_cache):
                 a_local = d.get('author', torch.empty(0, device=device, dtype=torch.long))
                 if a_local.numel() == 0:
-                    preds.append(torch.zeros(5, device=device))
+                    preds.append(torch.zeros(6, device=device))
                     continue
                 au_raw = [ self.idx2aut[int(j)] for j in a_local ]
                 p = self.predict_team(au_raw, topic_all[i], snapshots, t)
@@ -470,10 +460,10 @@ class ImpactModel(nn.Module):
             return torch.tensor(rows, dtype=torch.long, device=device)
 
         # --------------------------------------------------------------
-        # build the 5-step sequence for every team  →  [N, 5, H]
+        # build the 5-step sequence for every team  →  [N, 6, H]
         # --------------------------------------------------------------
         seq_steps = []
-        for offset in range(history - 1, -1, -1):          # 4 … 0
+        for offset in range(history + 1, -1, -1):          # 4 … 0
             yr = current_year_idx - offset
 
             # (i) author embedding
@@ -496,7 +486,7 @@ class ImpactModel(nn.Module):
                 self.imputer.w['self'] * topic_vec_batch)
             seq_steps.append(v_k)
 
-        V_p = torch.stack(seq_steps, dim=1)                 # [N, 5, H]
+        V_p = torch.stack(seq_steps, dim=1)                 # [N, 6, H]
 
         # --------------------------------------------------------------
         # Predict with ImpactRNN

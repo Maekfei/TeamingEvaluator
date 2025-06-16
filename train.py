@@ -24,8 +24,8 @@ def save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values
 
     for i in range(num_male_values_to_include):
         try:
-            # Round to 4 decimal places for the filename
-            male_components.append(f"male{i}_{round(float(current_male_values[i]), 4):.4f}")
+            # Round to 3 decimal places for the filename
+            male_components.append(f"male{i}_{round(float(current_male_values[i]), 3):.3f}")
         except (ValueError, TypeError) as e:
             console.print(f"[yellow]Warning: Could not process MALE value at index {i} for filename component: '{current_male_values[i]}'. Error: {e}[/yellow]")
             male_components.append(f"male{i}_error")
@@ -59,32 +59,31 @@ def save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_years", nargs=2, type=int, required=True,
-                        help="e.g. 1995 2004 inclusive, the yeas to train on")
-    parser.add_argument("--test_years", nargs=2, type=int, required=True)
-    parser.add_argument("--hidden_dim", type=int, default=64)
+                        help="e.g. 2006 2014 inclusive, the yeas to train on")
+    parser.add_argument("--test_years", nargs=2, type=int, required=True,
+                        help="e.g. 2016 2018 inclusive, the yeas to test on")
+    parser.add_argument("--hidden_dim", type=int, default=32) # empirically found to be good
     parser.add_argument("--epochs", type=int, default=240, help="Total number of epochs to train for.")
     parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--beta", type=float, default=.5) # regularization parameter
+    parser.add_argument("--lr", type=float, default=2e-2) # empirically found to be good
+    parser.add_argument("--beta", type=float, default=0) # regularization parameter, 0 is no regularization and works well
     parser.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--cold_start_prob", type=float, default=0.5,
                         help="probability that a training paper is treated as "
-                             "venue/reference-free (cold-start calibration)")
+                             "venue/reference-free (cold-start calibration)") # 1 makes the training set 100% cold-start and 0 makes it 0% cold-start. 1 makes the training easier. 
     parser.add_argument("--eval_mode", choices=["paper", "team"], default="paper",
                         help="'paper' = original evaluation  |  'team' = counter-factual")
 
     parser.add_argument("--load_checkpoint", type=str, default=None,
                         help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
     parser.add_argument("--training_off", type=int, default=0,
-                    help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
-    # ['all features', 'drop toic']
-    # choose one of the two
+                    help="If 1, training is turned off and the model is evaluated only. If 0, training is turned on and the model is trained.")
     parser.add_argument("--input_feature_model", choices=['all features', 'drop topic'], default='all features',
-                        help="Input feature model to use. Choose one of the two: 'all features' or 'drop topic'.")
+                        help="During the training, Input feature model to use. Choose one of the two: 'all features' or 'drop topic'.")
     parser.add_argument("--inference_time_author_dropping", type=str, default=False,
                         help="Whether to drop authors from the training set. Default is False.")
-    parser.add_argument("--inference_time_num_author_dropping_k", type=int, default=0,
-                        help="Number of authors to drop from the training set. Default is 0.")
+    # parser.add_argument("--inference_time_num_author_dropping_k", type=int, default=0,
+    #                     help="Number of authors to drop from the training set. Default is 0.")
     args = parser.parse_args()
 
     run_dir_suffix = f"_{args.eval_mode}"
@@ -103,15 +102,15 @@ def main():
         console.print(f"Run directory: {run_dir}")
         console.print(f"Arguments: {args}")
         console.print(f"CUDA available: {torch.cuda.is_available()}")
-        
+        five_years_before_train_years = list(range(args.train_years[0] - 5, args.train_years[0]))
         train_years = list(range(args.train_years[0], args.train_years[1] + 1))
         test_years = list(range(args.test_years[0], args.test_years[1] + 1))
-
+        console.print(f"[bold]Five years before train years:[/bold] {five_years_before_train_years}")
         console.print(f"[bold]Train years:[/bold] {train_years}")
         console.print(f"[bold]Test years:[/bold]  {test_years}")
         console.print(f"[bold]Device:[/bold] {args.device}")
         
-        snapshots = load_snapshots("data/yearly_snapshots_specter2_starting_from_year_1/G_{}.pt", train_years + test_years)
+        snapshots = load_snapshots("data/yearly_snapshots_specter2_starting_from_year_1/G_{}.pt", five_years_before_train_years + train_years + test_years)
         snapshots = [g.to(args.device) for g in snapshots]
         
         author_raw_ids = snapshots[-1]['author'].raw_ids          # list[str]
@@ -134,7 +133,7 @@ def main():
                             input_feature_model=args.input_feature_model,
                             args=args,
                             ).to(args.device)
-        optimizer = Adam(model.parameters(), lr=args.lr)
+        optimizer = Adam(model.parameters(), lr=args.lr) 
 
         start_epoch = 1
         loaded_checkpoint_args_info = "None"  
@@ -206,13 +205,13 @@ def main():
                 if args.eval_mode == "paper":
                     male, rmsle, mape = model.evaluate(
                         snapshots,
-                        list(range(len(train_years), len(train_years)+len(test_years))),
+                        list(range(len(train_years) + 5, len(train_years)+len(test_years) + 5)), # 5 is the first year of the training data
                         start_year=train_years[0]
                     )
                 else:  # counter-factual
                     male, rmsle, mape, y_true, y_predict = model.evaluate_team(
                         snapshots,
-                        list(range(len(train_years), len(train_years)+len(test_years))),
+                        list(range(len(train_years) + 5, len(train_years)+len(test_years) + 5)), # 5 is the first year of the training data
                         start_year=train_years[0],
                         return_raw=True
                     )
@@ -249,7 +248,7 @@ def main():
             model.train()
             optimizer.zero_grad()
             # for the forward pass, we need to pass the snapshots for the training years, not only the idx, but the specific year, so add the first specific year as one element
-            loss, log = model(snapshots, list(range(len(train_years))), train_years[0])
+            loss, log = model(snapshots, list(range(5, 5 + len(train_years))), train_years[0]) # 5 is the first year of the training data
             loss.backward()
             optimizer.step()
 
@@ -265,13 +264,13 @@ def main():
                     if args.eval_mode == "paper":
                         male, rmsle, mape = model.evaluate(
                             snapshots,
-                            list(range(len(train_years), len(train_years)+len(test_years))),
+                            list(range(len(train_years) + 5, len(train_years)+len(test_years) + 5)), # 5 is the first year of the training data
                             start_year=train_years[0]
                         )
                     else:  # counter-factual
                         male, rmsle, mape = model.evaluate_team(
                             snapshots,
-                            list(range(len(train_years), len(train_years)+len(test_years))),
+                            list(range(len(train_years) + 5, len(train_years)+len(test_years) + 5)), # 5 is the first year of the training data
                             start_year=train_years[0]
                         )
                     
