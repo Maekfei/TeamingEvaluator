@@ -1,6 +1,6 @@
 import argparse, time
 import torch
-from torch.optim import Adam
+from torch.optim import Adam, AdamW
 from utils.data_utils import load_snapshots
 from models.full_model import ImpactModel
 from rich.console import Console
@@ -133,7 +133,7 @@ def main():
                             input_feature_model=args.input_feature_model,
                             args=args,
                             ).to(args.device)
-        optimizer = Adam(model.parameters(), lr=args.lr) 
+        optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=5e-3)
 
         start_epoch = 1
         loaded_checkpoint_args_info = "None"  
@@ -255,7 +255,7 @@ def main():
             log_items_str = "  ".join(f"{k}:{v:.4f}" for k, v in log.items())
             console.log(f"Epoch {epoch:03d}  Loss: {loss.item():.4f}  {log_items_str}")
 
-            if epoch % 50 == 0 or epoch == args.epochs:
+            if epoch % 10 == 0 or epoch == args.epochs:
                 model.eval()
                 with torch.no_grad():
                     current_male_values = None
