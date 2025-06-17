@@ -31,7 +31,7 @@ class ImpactModel(nn.Module):
         super().__init__()
         self.encoder = RGCNEncoder(metadata, in_dims, hidden_dim) # output: keys ('author', 'paper', 'venue'), values: embeddings. (num_nodes_of_that_type, hidden_dim)
         self.imputer = WeightedImputer(meta_types, hidden_dim) # impute to update the new paper embedding.
-        self.generator = ImpactRNN(hidden_dim)
+        self.generator = ImpactRNN(hidden_dim, rnn_layers=1)
         self.beta = beta
         self.hidden_dim = hidden_dim
         self.cold_p = cold_start_prob
@@ -93,6 +93,7 @@ class ImpactModel(nn.Module):
 
         # -------- prediction loss over all new papers ----------------
         l_pred = []
+        n_samples = []
         for t in years_train: # year t. start from 5, as we are using 5 years before the training set for the imputer.
             data = snapshots[t]
             year_actual = start_year + t - 5 # 5 is the first year of the training data
@@ -107,7 +108,7 @@ class ImpactModel(nn.Module):
             else:
                 topic_all = embeddings[t]['paper'][paper_ids]
 
-            N = y_true.size(0)
+            N = y_true.size(0) # number of (core) papers in the current year
 
             # ----------------------------------------------------------
             # 3.1 cache neighbours of every paper in its publication yr
@@ -129,7 +130,6 @@ class ImpactModel(nn.Module):
             # 3.2 build sequence  [t-1, …, t-history]
             # ----------------------------------------------------------
 
-
             # Need to check the logic below, we need to update this part.
             seq_steps = []
             for k in range(self.history + 1): # k = 0 … 5
@@ -144,7 +144,7 @@ class ImpactModel(nn.Module):
                                         topic_vec        = topic_all[i]
                                     )
                                     for i in range(N)
-                                ], dim=0)                                            # [N,H]
+                                ], dim=0)                                            # [N,H], each paper has a embedding of size H.
             seq_steps.append(seq_k) # seq_k is a tensor of shape [N,H], from year t back to year t -5, from now to 5 years ago
             seq_steps = seq_steps[::-1] # reverse the sequence, in a chronological order.
             V_p = torch.stack(seq_steps, dim=1)    # [N,6,H]
@@ -177,9 +177,14 @@ class ImpactModel(nn.Module):
                 print(f"loss value: {loss.item()}")
                 print(f"y_true shape: {y_true.shape}, y_hat shape: {y_hat.shape}")
             
-            l_pred.append(loss)
+            l_pred.append(loss * y_true.size(0))  # weight by number of samples
+            n_samples.append(y_true.size(0))
 
-        l_pred = torch.stack(l_pred).mean()
+        if n_samples:
+            l_pred = torch.stack(l_pred).sum() / sum(n_samples)
+        else:
+            l_pred = torch.tensor(0.0, device=device)
+
         loss   = l_pred + self.beta * l_time
 
         log = dict(L_pred=l_pred.item(),
@@ -259,7 +264,6 @@ class ImpactModel(nn.Module):
         return male.cpu(), rmsle.cpu(), mape.cpu()
 
     # -----------------------------------------------------------------
-    # -----------------------------------------------------------------
     @torch.no_grad()
     def predict_team(
         self,
@@ -271,11 +275,6 @@ class ImpactModel(nn.Module):
         """
         Counter-factual prediction that is conditioned on the topic vector
         plus the embeddings of the *same* authors in the previous years.
-
-        author_ids        : list of raw author IDs (strings)
-        topic_vec         : H-dim tensor of the paper topic
-        snapshots         : list[HeteroData]  (all yearly graphs)
-        current_year_idx  : index of the snapshot in which the paper occurs
         """
         device = next(self.parameters()).device
         if self.input_feature_model == 'drop topic':
@@ -309,104 +308,107 @@ class ImpactModel(nn.Module):
             out = torch.tensor(rows, dtype=torch.long, device=device) if rows else torch.empty(0, dtype=torch.long, device=device)
             idx_cache[year] = out
             return out
-        # --------------------------------------------------------------
+
+        # Build sequence
         seq = []
-        for offset in range(self.history + 1, -1, -1):
+        for offset in range(self.history, -1, -1): # 5, 4, 3, 2, 1, 0
             yr = current_year_idx - offset
-
-            if offset == 0:
-                # Prediction year; we skip author embedding by design
+            ids = _author_indices(yr)
+            if ids.numel() == 0:
                 auth_emb = torch.zeros(self.hidden_dim, device=device)
-            elif yr >= 0:
-                ids = _author_indices(yr)
-                if ids.numel() == 0:
-                    auth_emb = torch.zeros(self.hidden_dim, device=device)
-                else:
-                    enc_dict = self.encoder(snapshots[yr])
-                    # print(enc_dict)
-                    # Use attention mechanism instead of simple mean
-                    auth_embs = enc_dict['author'][ids]  # [num_authors, hidden_dim]
-                    
-                    auth_emb = self.imputer.aggregate_authors_with_attention(auth_embs)
-                    
-
             else:
-                auth_emb = torch.zeros(self.hidden_dim, device=device)
-
+                enc_dict = self.encoder(snapshots[yr])
+                auth_embs = enc_dict['author'][ids]  # [num_authors, hidden_dim]
+                auth_emb = self.imputer.aggregate_authors_with_attention(auth_embs)
             v_k = (self.imputer.w['author'] * auth_emb +
-                self.imputer.w['self'] * topic_vec)
+                   self.imputer.w['self'] * topic_vec)
             seq.append(v_k)
 
         V_p = torch.stack(seq, 0).unsqueeze(0)  # [1,6,H]
         eta, mu, sigma = self.generator(V_p)
         cum = self.generator.predict_cumulative(
             self.horizons.to(device), eta, mu, sigma
-        )  # [1,6]
+        )
         yearly = torch.cat([cum[:, :1], cum[:, 1:] - cum[:, :-1]], 1)
         return yearly.squeeze(0)  # [6]
 
-    # -----------------------------------------------------------------
     @torch.no_grad()
     def evaluate_team(self, snapshots, years_test, start_year, return_raw=False):
         """
         Evaluate in the counter-factual setting:
         use only authors + topic of each paper in test years.
-        includeing inference-time author dropping.
+        including inference-time author dropping.
         """
-        device    = next(self.parameters()).device
-        horizons  = self.horizons.to(device)
+        device = next(self.parameters()).device
+        horizons = self.horizons.to(device)
 
-        encs = [self.encoder(g) for g in snapshots]       # testing years
+        # Pre-encode all snapshots once
+        print("Pre-encoding all snapshots...")
+        encs = [self.encoder(g) for g in snapshots]
+        print("Done encoding snapshots")
+
         y_true_all, y_pred_all = [], []
+        males, rmsles, mapes = [], [], []
 
-        males, rmsles, mapes = [], [] ,[]
         for t in years_test:
             data = snapshots[t]
-            year_actual = start_year + t - 5 # 5 is the first year of the training data
+            year_actual = start_year + t - 5  # 5 is the first year of the training data
             mask = (data['paper'].y_year == year_actual).to(device)
-            if mask.sum() == 0:           # nothing to train / evaluate for that year
+            if mask.sum() == 0:  # nothing to train / evaluate for that year
                 continue
 
             paper_ids = mask.nonzero(as_tuple=False).view(-1)
-            y_true    = data['paper'].y_citations[paper_ids].float()
+            y_true = data['paper'].y_citations[paper_ids].float()
             if self.input_feature_model == 'drop topic':
                 topic_all = torch.zeros(y_true.size(0), self.hidden_dim, device=device)
-            topic_all = encs[t]['paper'][paper_ids]
+            else:
+                topic_all = encs[t]['paper'][paper_ids]
             N = y_true.size(0)
 
-
+            # Get all author indices for all papers at once
             neigh_cache = [
                 self.imputer.collect_neighbours(data, int(pid), device)
                 for pid in paper_ids
             ]
             for d in neigh_cache:
-                d.pop('venue',  None)
-                d.pop('paper',  None)   # keep only authors
+                d.pop('venue', None)
+                d.pop('paper', None)  # keep only authors
 
+            # Process papers in batches using predict_teams
+            batch_size = 100  # Process 100 papers at a time
             preds = []
-            for i, d in enumerate(neigh_cache):
-                a_local = d.get('author', torch.empty(0, device=device, dtype=torch.long))
-                if a_local.numel() == 0:
-                    preds.append(torch.zeros(6, device=device))
-                    continue
-                au_raw = [ self.idx2aut[int(j)] for j in a_local ]
-                p = self.predict_team(au_raw, topic_all[i], snapshots, t)
-                preds.append(p)
-            y_hat = torch.stack(preds, 0)
+            for i in range(0, N, batch_size):
+                end_idx = min(i + batch_size, N)
+                batch_teams = []
+                
+                # Prepare batch of (author_ids, topic_vec) pairs
+                for j in range(i, end_idx):
+                    d = neigh_cache[j]
+                    a_local = d.get('author', torch.empty(0, device=device, dtype=torch.long))
+                    if a_local.numel() == 0:
+                        # For papers with no authors, use empty list and zero topic
+                        batch_teams.append(([], torch.zeros(self.hidden_dim, device=device)))
+                    else:
+                        au_raw = [self.idx2aut[int(k)] for k in a_local]
+                        batch_teams.append((au_raw, topic_all[j]))
 
-            males .append(male_vec (y_true, y_hat))
+                # Process batch
+                batch_preds = self.predict_teams(batch_teams, snapshots, t)
+                preds.append(batch_preds)
+
+            y_hat = torch.cat(preds, 0)
+
+            males.append(male_vec(y_true, y_hat))
             rmsles.append(rmsle_vec(y_true, y_hat))
             mapes.append(mape_vec(y_true, y_hat))
 
-
-            # store raw arrays -------------------------------------------------
             if return_raw:
                 y_true_all.append(y_true.cpu())
                 y_pred_all.append(y_hat.cpu())
 
-        male  = torch.stack(males ).mean(0)
+        male = torch.stack(males).mean(0)
         rmsle = torch.stack(rmsles).mean(0)
-        mape  = torch.stack(mapes ).mean(0)
+        mape = torch.stack(mapes).mean(0)
 
         if return_raw:
             y_true_all = torch.cat(y_true_all, 0)
@@ -414,7 +416,7 @@ class ImpactModel(nn.Module):
             return male.cpu(), rmsle.cpu(), mape.cpu(), y_true_all, y_pred_all
         else:
             return male.cpu(), rmsle.cpu(), mape.cpu()
-    
+
     # -----------------------------------------------------------------
     @torch.no_grad()
     def predict_teams(
@@ -463,7 +465,7 @@ class ImpactModel(nn.Module):
         # build the 5-step sequence for every team  →  [N, 6, H]
         # --------------------------------------------------------------
         seq_steps = []
-        for offset in range(history + 1, -1, -1):          # 4 … 0
+        for offset in range(history, -1, -1):          # 5, 4, 3, 2, 1, 0
             yr = current_year_idx - offset
 
             # (i) author embedding

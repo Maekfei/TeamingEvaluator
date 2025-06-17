@@ -16,7 +16,7 @@ class RGCNEncoder(nn.Module):
         metadata: Dict,
         in_dims: Dict[str, int],
         hidden_dim: int = 32,
-        num_layers: int = 2,
+        num_layers: int = 2, # followed hints paper
         dropout: float = 0.1,
     ):
         super().__init__()

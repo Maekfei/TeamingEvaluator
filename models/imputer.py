@@ -50,7 +50,6 @@ class WeightedImputer(nn.Module):
         mask = (src == paper_id).nonzero(as_tuple=False).view(-1)
         if mask.numel():
             neighbours['paper'] = dst.index_select(0, mask)
-
         return neighbours
 
     def aggregate_authors_with_attention(self, author_embeddings):
@@ -120,6 +119,7 @@ class WeightedImputer(nn.Module):
 
         # ----- weighted average  -----------------------------------------
         parts = []
+        weights = []
         for ntype, ids in neighbours.items():
             # some neighbour ids may not exist yet in an earlier snapshot
             ids = ids[ids < embs[ntype].size(0)]
@@ -129,15 +129,24 @@ class WeightedImputer(nn.Module):
                 # Use attention mechanism for authors
                 author_embeddings = embs[ntype][ids]  # [num_authors, hidden_dim]
                 aggregated_authors = self.aggregate_authors_with_attention(author_embeddings)
-                parts.append(self.w[ntype] * aggregated_authors)
+                parts.append(aggregated_authors)
+                weights.append(self.w[ntype])
             else:
-                parts.append(self.w[ntype] * embs[ntype][ids].mean(dim=0))
+                parts.append(embs[ntype][ids].mean(dim=0))
+                weights.append(self.w[ntype])
 
         # --- add the paper's own embedding --------------------------------
         if topic_vec is not None:
-            parts.append(self.w['self'] * topic_vec)
+            parts.append(topic_vec)
+            weights.append(self.w['self'])
         
         if len(parts) == 0:
             return torch.zeros(embs['paper'].size(-1), device=device)
 
-        return torch.stack(parts, dim=0).sum(dim=0)
+        # Normalize weights
+        weights = torch.stack(weights)
+        weights = torch.softmax(weights, dim=0)  # Normalize weights to sum to 1
+        
+        # Apply normalized weights
+        weighted_parts = [w * p for w, p in zip(weights, parts)]
+        return torch.stack(weighted_parts, dim=0).sum(dim=0)

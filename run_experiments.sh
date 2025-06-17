@@ -19,9 +19,10 @@ run_experiment() {
     python train.py \
         --train_years 2006 2014 \
         --test_years 2015 2018 \
-        --lr 1e-2 \
+        --lr 2e-3 \
+        --weight_decay 5e-4 \
         --hidden_dim $hidden_dim \
-        --epochs 100 \
+        --epochs 800 \
         --cold_start_prob $cold_start_prob \
         --beta $beta \
         --eval_mode team \
@@ -34,21 +35,21 @@ mkdir -p experiment_logs
 
 # First batch of experiments (10 parallel runs)
 # cuda:0
-run_experiment 0 32 0.5 0 1 &
-run_experiment 0 32 0.5 0 2 &
+run_experiment 0 32 0 0 1 &
+run_experiment 0 32 0 0 2 &
 
 # cuda:1
-run_experiment 1 32 0.5 0 3 &
-run_experiment 1 32 0.5 0 4 &
+run_experiment 1 32 0 0 3 &
+run_experiment 1 32 0 0 4 &
 
 # cuda:2
-run_experiment 2 32 0.5 0 5 &
-run_experiment 2 32 0.5 0 6 &
+run_experiment 2 32 0 0 5 &
+run_experiment 2 32 0 0 6 &
 
 # cuda:3
-run_experiment 3 32 0.5 0 7 &
-run_experiment 3 32 0.5 0 8 &
+run_experiment 3 32 0 0 7 &
+run_experiment 3 32 0 0 8 &
 
 # cuda:4
-run_experiment 4 32 0.5 0 9 &
-run_experiment 4 32 0.5 0 10 &
+run_experiment 4 32 0 0 9 &
+run_experiment 4 32 0 0 10 &

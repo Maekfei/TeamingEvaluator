@@ -1,7 +1,7 @@
 import torch
 
 
-def male_vec(y_true, y_pred, eps=1.0):
+def male_vec(y_true, y_pred):
     """
     Mean Absolute Log-scaled Error for every horizon separately.
     Returns tensor [L]
@@ -10,7 +10,7 @@ def male_vec(y_true, y_pred, eps=1.0):
     return err.mean(dim=0)
 
 
-def rmsle_vec(y_true, y_pred, eps=1.0):
+def rmsle_vec(y_true, y_pred):
     """
     Root Mean Square Log-scaled Error  for every horizon.
     """

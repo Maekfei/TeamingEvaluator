@@ -84,6 +84,8 @@ def main():
                         help="Whether to drop authors from the training set. Default is False.")
     # parser.add_argument("--inference_time_num_author_dropping_k", type=int, default=0,
     #                     help="Number of authors to drop from the training set. Default is 0.")
+    parser.add_argument("--weight_decay", type=float, default=5e-3,
+                        help="Weight decay for the optimizer. Default is 5e-3.")
     args = parser.parse_args()
 
     run_dir_suffix = f"_{args.eval_mode}"
@@ -133,7 +135,7 @@ def main():
                             input_feature_model=args.input_feature_model,
                             args=args,
                             ).to(args.device)
-        optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=5e-3)
+        optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
         start_epoch = 1
         loaded_checkpoint_args_info = "None"  
@@ -255,7 +257,7 @@ def main():
             log_items_str = "  ".join(f"{k}:{v:.4f}" for k, v in log.items())
             console.log(f"Epoch {epoch:03d}  Loss: {loss.item():.4f}  {log_items_str}")
 
-            if epoch % 10 == 0 or epoch == args.epochs:
+            if epoch % 10 == 0 or epoch == args.epochs or epoch == 1:
                 model.eval()
                 with torch.no_grad():
                     current_male_values = None
@@ -268,11 +270,13 @@ def main():
                             start_year=train_years[0]
                         )
                     else:  # counter-factual
+                        print(f'evaluating team at epoch {epoch}')
                         male, rmsle, mape = model.evaluate_team(
                             snapshots,
                             list(range(len(train_years) + 5, len(train_years)+len(test_years) + 5)), # 5 is the first year of the training data
                             start_year=train_years[0]
                         )
+                        print(f'finished evaluating team at epoch {epoch}')
                     
                     current_male_values = male.tolist() if hasattr(male, 'tolist') else male
                     current_rmsle_values = rmsle.tolist() if hasattr(rmsle, 'tolist') else rmsle
