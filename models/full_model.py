@@ -168,8 +168,20 @@ class ImpactModel(nn.Module):
                 print(f"log1p(y_true) stats: min={torch.log1p(y_true).min().item():.3f}, max={torch.log1p(y_true).max().item():.3f}")
                 print(f"log1p(y_hat) stats: min={torch.log1p(y_hat).min().item():.3f}, max={torch.log1p(y_hat).max().item():.3f}")
 
-            loss = ((torch.log1p(y_true) -
-                     torch.log1p(y_hat)) ** 2).mean()
+            # Calculate year-wise losses
+            year_losses = (torch.log1p(y_true) - torch.log1p(y_hat)) ** 2  # [N, 5]
+            
+            # Calculate mean loss per year
+            mean_loss_per_year = year_losses.mean(dim=0)  # [5]
+            
+            # Calculate how much each year's loss deviates from the mean
+            year_deviation = torch.abs(year_losses - mean_loss_per_year)  # [N, 5]
+            
+            # Add penalty for large deviations from mean loss
+            deviation_penalty = year_deviation.mean()
+            
+            # Combine the main loss with the deviation penalty
+            loss = year_losses.mean() + 0.1 * deviation_penalty
             
             if torch.isnan(loss):
                 print("NaN detected in final loss:")

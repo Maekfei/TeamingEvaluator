@@ -31,7 +31,7 @@ run_experiment() {
         --grad_clip 1.0 \
         --lr_patience 5 \
         --lr_factor 0.5 \
-        --early_stop_patience 10 \
+        --early_stop_patience 5 \
         --min_lr 1e-5 \
         --eval_mode team \
         --device cuda:$cuda_id \

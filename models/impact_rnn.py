@@ -63,12 +63,28 @@ class ImpactRNN(nn.Module):
                 # Initialize biases to small values
                 nn.init.constant_(param, 0.01)
         
-        # Initialize MLP weights
+        # Initialize MLP weights with different gains for different heads
         for name, param in self.named_parameters():
             if 'head' in name and 'weight' in name:
-                nn.init.xavier_uniform_(param, gain=mlp_gain)
+                if 'eta' in name:
+                    # Initialize eta head with smaller values to prevent extreme growth
+                    nn.init.xavier_uniform_(param, gain=mlp_gain * 0.5)
+                elif 'mu' in name:
+                    # Initialize mu head with values centered around 0
+                    nn.init.xavier_uniform_(param, gain=mlp_gain)
+                elif 'sigma' in name:
+                    # Initialize sigma head with slightly larger values
+                    nn.init.xavier_uniform_(param, gain=mlp_gain * 1.5)
             elif 'head' in name and 'bias' in name:
-                nn.init.zeros_(param)
+                if 'eta' in name:
+                    # Initialize eta bias to small positive value
+                    nn.init.constant_(param, 0.1)
+                elif 'mu' in name:
+                    # Initialize mu bias to 0
+                    nn.init.zeros_(param)
+                elif 'sigma' in name:
+                    # Initialize sigma bias to small positive value
+                    nn.init.constant_(param, 0.2)
         
     # ----------------------------------------------------------------------
     def forward(self, seq):               # seq: [N,6,H], N: number of papers, 6: number of years, H: hidden dimension
@@ -103,9 +119,20 @@ class ImpactRNN(nn.Module):
 
         # Get outputs with adaptive bounds based on hidden dimension
         max_val = 8.0 / math.sqrt(self.gru.hidden_size / 8.0)  # Scale bounds with hidden dimension
-        eta   = torch.clamp(self.head_eta(z).squeeze(-1), min=-max_val, max=max_val)                   # [B]
-        mu    = torch.clamp(self.head_mu(z).squeeze(-1), min=-max_val, max=max_val)                    # [B]
-        sigma = torch.clamp(torch.relu(self.head_sigma(z)).squeeze(-1) + 1e-4, min=1e-4, max=max_val)  # >0
+        
+        # Add constraints to prevent extreme values
+        eta = torch.clamp(self.head_eta(z).squeeze(-1), min=-max_val, max=max_val)  # [B]
+        mu = torch.clamp(self.head_mu(z).squeeze(-1), min=-max_val, max=max_val)    # [B]
+        
+        # Ensure sigma is not too small to prevent extreme distributions
+        sigma = torch.clamp(torch.relu(self.head_sigma(z)).squeeze(-1) + 0.2, min=0.2, max=max_val)  # >0
+        
+        # Add small noise during training to help escape local minima
+        if self.training:
+            eta = eta + torch.randn_like(eta) * 0.01
+            mu = mu + torch.randn_like(mu) * 0.01
+            sigma = sigma + torch.randn_like(sigma) * 0.01
+            sigma = torch.clamp(sigma, min=0.2, max=max_val)  # Re-clamp after noise
 
         # Debug outputs only if NaNs are detected
         if torch.isnan(eta).any() or torch.isnan(mu).any() or torch.isnan(sigma).any():
