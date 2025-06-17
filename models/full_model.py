@@ -145,10 +145,9 @@ class ImpactModel(nn.Module):
                                     )
                                     for i in range(N)
                                 ], dim=0)                                            # [N,H], each paper has a embedding of size H.
-            seq_steps.append(seq_k) # seq_k is a tensor of shape [N,H], from year t back to year t -5, from now to 5 years ago
+                seq_steps.append(seq_k) # seq_k is a tensor of shape [N,H], from year t back to year t -5, from now to 5 years ago
             seq_steps = seq_steps[::-1] # reverse the sequence, in a chronological order.
-            V_p = torch.stack(seq_steps, dim=1)    # [N,6,H]
-
+            V_p = torch.stack(seq_steps, dim=1) # [N,6,H]
             # 3.3 generate citation distribution -----------------------
             eta, mu, sigma = self.generator(V_p) 
             y_hat_cum = self.generator.predict_cumulative(
@@ -465,19 +464,17 @@ class ImpactModel(nn.Module):
         # build the 5-step sequence for every team  →  [N, 6, H]
         # --------------------------------------------------------------
         seq_steps = []
-        for offset in range(history, -1, -1):          # 5, 4, 3, 2, 1, 0
-            yr = current_year_idx - offset
-
+        for k in range(history + 1):          # 0, 1, 2, 3, 4, 5
+            yr = current_year_idx - k
             # (i) author embedding
             author_emb = torch.zeros(N, H, device=device)
-            if offset != 0 and yr >= 0:                     # past year
-                enc_dict = self.encoder(snapshots[yr])
-                for n, (au_list, _) in enumerate(teams):
-                    row_idx = _rows_of(yr, au_list)
-                    if row_idx.numel() > 0:
-                        # Use attention mechanism instead of simple mean
-                        author_embs = enc_dict['author'][row_idx]  # [num_authors, hidden_dim]
-                        author_emb[n] = self.imputer.aggregate_authors_with_attention(author_embs)
+            enc_dict = self.encoder(snapshots[yr])
+            for n, (au_list, _) in enumerate(teams):
+                row_idx = _rows_of(yr, au_list)
+                if row_idx.numel() > 0:
+                    # Use attention mechanism instead of simple mean
+                    author_embs = enc_dict['author'][row_idx]  # [num_authors, hidden_dim]
+                    author_emb[n] = self.imputer.aggregate_authors_with_attention(author_embs)
 
             # (ii) topic vector (rest remains the same)
             topic_vec_batch = torch.stack([t[1] for t in teams]).to(device)
@@ -488,6 +485,7 @@ class ImpactModel(nn.Module):
                 self.imputer.w['self'] * topic_vec_batch)
             seq_steps.append(v_k)
 
+        seq_steps = seq_steps[::-1]  # reverse to get chronological order
         V_p = torch.stack(seq_steps, dim=1)                 # [N, 6, H]
 
         # --------------------------------------------------------------

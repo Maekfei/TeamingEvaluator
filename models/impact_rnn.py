@@ -5,6 +5,7 @@ import math
 
 class ImpactRNN(nn.Module):
     """
+    Input: [N,6,H]
     GRU encodes the imputed pre-publication sequence.
     Three identical MLP heads (20 → 8 → 1) output   η, μ, σ   per paper.
     """
@@ -70,7 +71,7 @@ class ImpactRNN(nn.Module):
                 nn.init.zeros_(param)
         
     # ----------------------------------------------------------------------
-    def forward(self, seq):               # seq: [B, T, hidden_dim]
+    def forward(self, seq):               # seq: [N,6,H], N: number of papers, 6: number of years, H: hidden dimension
         # Debug input sequence only if NaNs are detected
         if torch.isnan(seq).any():
             print("NaN detected in input sequence:")
@@ -86,7 +87,7 @@ class ImpactRNN(nn.Module):
         
         # Forward pass through GRU with gradient clipping
         with torch.cuda.amp.autocast(enabled=False):  # Disable mixed precision to avoid potential issues
-            _, h_n = self.gru(seq, h0)            # h_n: [num_layers, B, H]
+            _, h_n = self.gru(seq, h0)            # h_n: 
         
         z = h_n[-1]                       # take last-layer hidden   [B, H]
         z = self.dropout(z)               # apply dropout to the hidden state
@@ -137,10 +138,6 @@ class ImpactRNN(nn.Module):
         """
         L = l.numel()
         B = eta.size(0)
-        
-        # Add small epsilon to prevent numerical issues
-        l = l + 1e-4
-        sigma = sigma + 1e-4
         
         x = (torch.log(l).view(1, L) - mu.view(B, 1)) / sigma.view(B, 1)
         phi = self._phi(x)
