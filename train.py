@@ -283,7 +283,8 @@ def main():
             torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
             
             optimizer.step()
-
+            log_items_str = "  ".join(f"{k}:{v:.4f}" for k, v in log.items())
+            console.log(f"Epoch {epoch:03d}  Loss: {loss.item():.4f}  {log_items_str}")
             # Validation step every 10 epochs
             if epoch % 10 == 0 or epoch == args.epochs or epoch == 1:
                 model.eval()
@@ -348,8 +349,7 @@ def main():
                             model.load_state_dict(best_model_state)
                             break
 
-                    log_items_str = "  ".join(f"{k}:{v:.4f}" for k, v in log.items())
-                    console.log(f"Epoch {epoch:03d}  Loss: {loss.item():.4f}  {log_items_str}")
+
 
                 # Save evaluated model checkpoint with detailed metrics
                 save_evaluated_model_checkpoint(
