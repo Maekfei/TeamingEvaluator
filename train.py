@@ -56,6 +56,26 @@ def save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values
     except Exception as e:
         console.print(f"[red]Error saving evaluated model checkpoint: {e}[/red]")
 
+def drop_all(authors):
+    return []
+
+def drop_none(authors):
+    return authors
+
+def drop_first(authors):
+    return authors[1:]
+
+def drop_last(authors):
+    return authors[:-1]
+
+def keep_first(authors):
+    return authors[:1]
+
+def keep_last(authors):
+    return authors[-1:]
+
+def drop_first_and_last(authors):
+    return authors[1:-1]
 
 def main():
     parser = argparse.ArgumentParser()
@@ -228,6 +248,22 @@ def main():
             with torch.no_grad():
                 current_male_values = None
                 current_rmsle_values = None
+                if args.inference_time_author_dropping=='no author':
+                    drop_fn = drop_all
+                elif args.inference_time_author_dropping=='all authors':
+                    drop_fn = drop_none
+                elif args.inference_time_author_dropping=='drop_first':
+                    drop_fn = drop_first
+                elif args.inference_time_author_dropping=='drop_last':
+                    drop_fn = drop_last
+                elif args.inference_time_author_dropping=='keep_first':
+                    drop_fn = keep_first
+                elif args.inference_time_author_dropping=='keep_last':
+                    drop_fn = keep_last
+                elif args.inference_time_author_dropping=='drop_first_and_last':
+                    drop_fn = drop_first_and_last
+                else:
+                    drop_fn = None
 
                 if args.eval_mode == "paper":
                     male, rmsle, mape = model.evaluate(
@@ -240,7 +276,8 @@ def main():
                         snapshots,
                         list(range(len(train_years) + 5, len(train_years)+len(test_years) + 5)), # 5 is the first year of the training data
                         start_year=train_years[0],
-                        return_raw=True
+                        return_raw=True,
+                        author_drop_fn=drop_fn
                     )
                 
                 
@@ -253,7 +290,7 @@ def main():
                     horizons=[f"Year {i}" for i in range(5)],
                     bins=100,
                     plot_type="hist",
-                    save_path="./figs/ours_dist_all_years_ci_hist.png",
+                    save_path="./figs/Year1_full_dist_ci_hist.png",
                     show=False)
                 
                 plot_yearly_aggregates(
@@ -262,7 +299,7 @@ def main():
                     horizons=[f"Year {i}" for i in range(5)],
                     agg_fn=np.median,
                     show_iqr=True,
-                    save_path="./figs/median_iqr.png",
+                    save_path="./figs/Year1_full_median_iqr.png",
                     show=False)
 
             return 0

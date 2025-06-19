@@ -306,6 +306,8 @@ class ImpactModel(nn.Module):
                 author_ids = [author_ids[0]]
             elif mode == 'keep_last' and len(author_ids) >= 1:
                 author_ids = [author_ids[-1]]
+            elif mode == 'no author':
+                author_ids = []
 
         # ------------- helper to translate raw ids to row indices -----
         idx_cache: dict[int, torch.Tensor] = {}
@@ -344,11 +346,12 @@ class ImpactModel(nn.Module):
         return yearly.squeeze(0)  # [6]
 
     @torch.no_grad()
-    def evaluate_team(self, snapshots, years_test, start_year, return_raw=False):
+    def evaluate_team(self, snapshots, years_test, start_year, return_raw=False, author_drop_fn=None):
         """
         Evaluate in the counter-factual setting:
         use only authors + topic of each paper in test years.
         including inference-time author dropping.
+        author_drop_fn: optional function(list[str]) -> list[str], to drop authors for ablation
         """
         device = next(self.parameters()).device
         horizons = self.horizons.to(device)
@@ -401,10 +404,13 @@ class ImpactModel(nn.Module):
                         batch_teams.append(([], torch.zeros(self.hidden_dim, device=device)))
                     else:
                         au_raw = [self.idx2aut[int(k)] for k in a_local]
+                        # Apply ablation function if provided
+                        if author_drop_fn is not None:
+                            au_raw = author_drop_fn(au_raw)
                         batch_teams.append((au_raw, topic_all[j]))
 
                 # Process batch
-                batch_preds = self.predict_teams(batch_teams, snapshots, t)
+                batch_preds = self.predict_teams(batch_teams, snapshots, t, author_drop_fn=None)  # already applied
                 preds.append(batch_preds)
 
             y_hat = torch.cat(preds, 0)
@@ -435,22 +441,11 @@ class ImpactModel(nn.Module):
         teams: list[tuple[list[str], torch.Tensor]],
         snapshots: list,
         current_year_idx: int,
+        author_drop_fn=None,
     ) -> torch.Tensor:
         """
         Vectorised counter-factual inference for many teams.
-
-        Parameters
-        ----------
-        teams            : list of (author_id_list, topic_vec) tuples
-                           • author_id_list  –  raw author ids (strings)
-                           • topic_vec       –  torch.FloatTensor [H]
-        snapshots        : list of yearly HeteroData graphs
-        current_year_idx : index of the snapshot that contains the topic
-                           vectors (= "today")
-
-        Returns
-        -------
-        Tensor  [N, 5]  – yearly citation predictions for every team
+        author_drop_fn: optional function(list[str]) -> list[str], to drop authors for ablation
         """
         device  = next(self.parameters()).device
         H       = self.hidden_dim
@@ -482,7 +477,9 @@ class ImpactModel(nn.Module):
             author_emb = torch.zeros(N, H, device=device)
             enc_dict = self.encoder(snapshots[yr])
             for n, (au_list, _) in enumerate(teams):
-                row_idx = _rows_of(yr, au_list)
+                # Apply ablation function if provided # have some problems here. Need to check.
+                au_list_mod = author_drop_fn(au_list) if author_drop_fn is not None else au_list
+                row_idx = _rows_of(yr, au_list_mod)
                 if row_idx.numel() > 0:
                     # Use attention mechanism instead of simple mean
                     author_embs = enc_dict['author'][row_idx]  # [num_authors, hidden_dim]

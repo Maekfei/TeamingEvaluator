@@ -4,8 +4,8 @@ Train / evaluate the simple GBM baseline (XGBoost).
 
 Example
 -------
-python baseline_train.py --train_years 2006 2015 --test_years 2016 2019 --feature_type "author_only"
-python baseline_train.py --train_years 2006 2015 --test_years 2016 2019 --feature_type "both" 
+python baseline_train.py --train_years 2006 2014 --test_years 2015 2018 --feature_type "author_only"
+python baseline_train.py --train_years 2006 2014 --test_years 2015 2018 --feature_type "both" 
 """
 import argparse, os, time, pickle
 from rich.console import Console
@@ -114,8 +114,8 @@ def build_dataset(snapshots, year_indices, years_all, feature_type="both",
                     paper2authors[pid_to_local[p]].append(a)
 
             # author embeddings from the previous year (safe – no look-ahead)
-            auth_emb_prev = (g_prev["author"].x.cpu()
-                             if g_prev is not None and "author" in g_prev.node_types
+            auth_emb_prev = (g_now["author"].x.cpu()
+                             if g_now is not None and "author" in g_now.node_types
                              else None)
 
         # --------------------------- build feature rows -------------------
@@ -468,7 +468,7 @@ def main():
     years_all = list(range(first_needed,
                            args.test_years[1] + 1))
     console.print(f"Loading {len(years_all)} yearly graphs …")
-    snapshots = load_snapshots("data/yearly_snapshots_specter2/G_{}.pt", years_all)
+    snapshots = load_snapshots("data/yearly_snapshots_specter2_starting_from_year_1/G_{}.pt", years_all)
 
     # 2) index helpers -----------------------------------------------------
     year2idx = {y: i for i, y in enumerate(years_all)}
@@ -489,16 +489,16 @@ def main():
     console.print(f"Test  samples: {X_test.shape [0]:,}")
 
     # 4) model -------------------------------------------------------------
-    # model = GBMBaseline(
-    #     n_estimators = args.n_estimators,
-    #     max_depth    = args.max_depth,
-    #     learning_rate= args.learning_rate,
-    # )
-    # console.print("[cyan]Training GBM …[/cyan]")
-    # model.fit(X_train, y_train)
+    model = GBMBaseline(
+        n_estimators = args.n_estimators,
+        max_depth    = args.max_depth,
+        learning_rate= args.learning_rate,
+    )
+    console.print("[cyan]Training GBM …[/cyan]")
+    model.fit(X_train, y_train)
     # load the model
     
-    model = pickle.load(open('runs_gbm/20250522_200518/gbm_model.pkl', "rb"))
+    # model = pickle.load(open('runs_gbm/20250522_200518/gbm_model.pkl', "rb"))
 
     # 5) evaluation --------------------------------------------------------
     male, rmsle, mape, y_prod = evaluate(model, X_test, y_test)

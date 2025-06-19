@@ -24,7 +24,7 @@ def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
                                         show: bool = True):
     """
     Creates 1×L panel of KDE plots or histograms comparing prediction vs. truth with confidence intervals.
-    Uses log-transformed x-axis: log1p(x + 1.0)
+    Uses log-transformed x-axis: log1p(x)
 
     Parameters
     ----------
@@ -52,9 +52,9 @@ def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
     for h in range(L):
         ax = axes[h]
         
-        # Transform data using log1p(x + 1.0)
-        y_true_transformed = torch.log1p(torch.tensor(y_true[:, h]) + 1.0).numpy()
-        y_pred_transformed = torch.log1p(torch.tensor(y_pred[:, h]) + 1.0).numpy()
+        # Transform data using log1p(x)
+        y_true_transformed = torch.log1p(torch.tensor(y_true[:, h])).numpy()
+        y_pred_transformed = torch.log1p(torch.tensor(y_pred[:, h])).numpy()
         
         if plot_type.lower() == "kde":
             # Plot main KDE on transformed data
@@ -123,7 +123,7 @@ def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
                        label=f"Pred {confidence_level:.0%} CI")
         
         ax.set_title(horizons[h])
-        ax.set_xlabel("log1p(Citation count + 1)")
+        ax.set_xlabel("log1p(Citation count)")
         ax.set_ylabel("Density")
         ax.legend()
 
