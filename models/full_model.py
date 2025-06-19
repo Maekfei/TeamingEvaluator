@@ -154,7 +154,7 @@ class ImpactModel(nn.Module):
                 self.horizons.to(device), eta, mu, sigma
             )                                           # [N, L]
 
-            # convert cumulative → yearly counts -----------------------
+            # convert cumulative → yearly counts; standard time series prediction -----------------------
             y_hat = torch.cat(
                 [y_hat_cum[:, :1], y_hat_cum[:, 1:] - y_hat_cum[:, :-1]],
                 dim=1,
@@ -309,35 +309,29 @@ class ImpactModel(nn.Module):
             elif mode == 'no author':
                 author_ids = []
 
-        # ------------- helper to translate raw ids to row indices -----
-        idx_cache: dict[int, torch.Tensor] = {}
+        # Pre-encode all snapshots once for efficiency
+        embeddings = [self.encoder(g) for g in snapshots]
 
-        def _author_indices(year: int) -> torch.Tensor:
-            if year in idx_cache:
-                return idx_cache[year]
-            raw_ids = snapshots[year]['author'].raw_ids  # list[str]
-            raw2row = {aid: i for i, aid in enumerate(raw_ids)}
-            rows = [raw2row[a] for a in author_ids if a in raw2row]
-            out = torch.tensor(rows, dtype=torch.long, device=device) if rows else torch.empty(0, dtype=torch.long, device=device)
-            idx_cache[year] = out
-            return out
-
-        # Build sequence
+        # Build sequence using the same approach as forward method
         seq = []
-        for offset in range(self.history, -1, -1): # 5, 4, 3, 2, 1, 0
+        for offset in range(self.history, -1, -1):  # 5, 4, 3, 2, 1, 0
             yr = current_year_idx - offset
-            ids = _author_indices(yr)
-            if ids.numel() == 0:
-                auth_emb = torch.zeros(self.hidden_dim, device=device)
-            else:
-                enc_dict = self.encoder(snapshots[yr])
-                auth_embs = enc_dict['author'][ids]  # [num_authors, hidden_dim]
-                auth_emb = self.imputer.aggregate_authors_with_attention(auth_embs)
-            v_k = (self.imputer.w['author'] * auth_emb +
-                   self.imputer.w['self'] * topic_vec)
+            
+            # Get author indices for this year
+            author_indices = self._get_author_indices_for_year(author_ids, yr, snapshots)
+            
+            # Use imputer to get the embedding for this year
+            v_k = self.imputer(
+                None,  # paper_id not needed
+                yr,
+                snapshots,
+                embeddings,
+                predefined_neigh={'author': author_indices},
+                topic_vec=topic_vec
+            )
             seq.append(v_k)
 
-        V_p = torch.stack(seq, 0).unsqueeze(0)  # [1,6,H]
+        V_p = torch.stack(seq, 0).unsqueeze(0)  # [1, 6, H]
         eta, mu, sigma = self.generator(V_p)
         cum = self.generator.predict_cumulative(
             self.horizons.to(device), eta, mu, sigma
@@ -405,7 +399,7 @@ class ImpactModel(nn.Module):
                     else:
                         au_raw = [self.idx2aut[int(k)] for k in a_local]
                         # Apply ablation function if provided
-                        if author_drop_fn is not None:
+                        if author_drop_fn is not None: # we can no
                             au_raw = author_drop_fn(au_raw)
                         batch_teams.append((au_raw, topic_all[j]))
 
@@ -452,50 +446,33 @@ class ImpactModel(nn.Module):
         N       = len(teams)
         history = self.history
 
-        # --------------------------------------------------------------
-        # helper : translate  raw-author-ids  →  row indices *per year*
-        # --------------------------------------------------------------
-        raw2row_cache: dict[int, dict[str, int]] = {}   # year → {raw:row}
-
-        def _rows_of(year: int, author_ids: list[str]) -> torch.LongTensor:
-            if year not in raw2row_cache:
-                raw_ids = snapshots[year]['author'].raw_ids
-                raw2row_cache[year] = {aid: i for i, aid in enumerate(raw_ids)}
-            mapping = raw2row_cache[year]
-            rows = [mapping[a] for a in author_ids if a in mapping]
-            if len(rows) == 0:
-                return torch.empty(0, dtype=torch.long, device=device)
-            return torch.tensor(rows, dtype=torch.long, device=device)
+        # Pre-encode all snapshots once for efficiency
+        embeddings = [self.encoder(g) for g in snapshots]
 
         # --------------------------------------------------------------
-        # build the 5-step sequence for every team  →  [N, 6, H]
+        # Build sequence using the same approach as forward method
         # --------------------------------------------------------------
         seq_steps = []
         for k in range(history + 1):          # 0, 1, 2, 3, 4, 5
             yr = current_year_idx - k
-            # (i) author embedding
-            author_emb = torch.zeros(N, H, device=device)
-            enc_dict = self.encoder(snapshots[yr])
-            for n, (au_list, _) in enumerate(teams):
-                # Apply ablation function if provided # have some problems here. Need to check.
-                au_list_mod = author_drop_fn(au_list) if author_drop_fn is not None else au_list
-                row_idx = _rows_of(yr, au_list_mod)
-                if row_idx.numel() > 0:
-                    # Use attention mechanism instead of simple mean
-                    author_embs = enc_dict['author'][row_idx]  # [num_authors, hidden_dim]
-                    author_emb[n] = self.imputer.aggregate_authors_with_attention(author_embs)
-
-            # (ii) topic vector (rest remains the same)
-            topic_vec_batch = torch.stack([t[1] for t in teams]).to(device)
-            if self.input_feature_model == 'drop topic':
-                topic_vec_batch = torch.zeros_like(topic_vec_batch)
-
-            v_k = (self.imputer.w['author'] * author_emb +
-                self.imputer.w['self'] * topic_vec_batch)
-            seq_steps.append(v_k)
+            
+            # Build sequence step for all teams at once
+            seq_k = torch.stack([
+                self.imputer(
+                    None,  # paper_id not needed
+                    yr,
+                    snapshots,
+                    embeddings,
+                    predefined_neigh={'author': self._get_author_indices_for_year(teams[i][0], yr, snapshots)},
+                    topic_vec=teams[i][1]
+                )
+                for i in range(N)
+            ], dim=0)  # [N, H]
+            
+            seq_steps.append(seq_k)
 
         seq_steps = seq_steps[::-1]  # reverse to get chronological order
-        V_p = torch.stack(seq_steps, dim=1)                 # [N, 6, H]
+        V_p = torch.stack(seq_steps, dim=1)  # [N, 6, H]
 
         # --------------------------------------------------------------
         # Predict with ImpactRNN
@@ -503,5 +480,27 @@ class ImpactModel(nn.Module):
         eta, mu, sigma = self.generator(V_p)
         horizons = self.horizons.to(device)
         cum = self.generator.predict_cumulative(horizons, eta, mu, sigma)
-        yearly = torch.cat([cum[:, :1], cum[:, 1:] - cum[:, :-1]], 1) # [N,5]
+        yearly = torch.cat([cum[:, :1], cum[:, 1:] - cum[:, :-1]], 1)  # [N, 5]
         return yearly
+
+    def _get_author_indices_for_year(self, author_ids: list[str], year: int, snapshots: list) -> torch.Tensor:
+        """
+        Helper method to get author indices for a specific year.
+        Returns empty tensor if authors don't exist in that year.
+        """
+        device = next(self.parameters()).device
+        
+        if not author_ids:
+            return torch.empty(0, dtype=torch.long, device=device)
+        
+        # Get raw author IDs for the specified year
+        raw_ids = snapshots[year]['author'].raw_ids
+        raw2row = {aid: i for i, aid in enumerate(raw_ids)}
+        
+        # Find which authors exist in this year
+        rows = [raw2row[a] for a in author_ids if a in raw2row]
+        
+        if not rows:
+            return torch.empty(0, dtype=torch.long, device=device)
+        
+        return torch.tensor(rows, dtype=torch.long, device=device)

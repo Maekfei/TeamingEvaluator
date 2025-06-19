@@ -47,7 +47,7 @@ class ImpactRNN(nn.Module):
         self._init_weights(hidden_dim)
 
         # global α  (detached buffer)
-        self.register_buffer("alpha", torch.tensor(math.e))   # ≈ 2.718
+        self.register_buffer("alpha", torch.tensor(33)) # 33 is the average number of references
         
     def _init_weights(self, hidden_dim):
         """Initialize weights with adaptive gain based on hidden dimension."""

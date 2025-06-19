@@ -45,44 +45,44 @@ id2embrow = {pid: i for i, pid in enumerate(emb_ids)}
 EMB_DIM   = emb_matrix.shape[1]
 
 # ------------- helpers: mapping tables ------------------------------------
-def load_or_init_mappings():
-    if os.path.isfile(META_CACHE):
-        print('[dataset_builder] loading cached id-maps …')
-        with open(META_CACHE, 'rb') as fh:
-            return pickle.load(fh)
+# def load_or_init_mappings():
+#     if os.path.isfile(META_CACHE):
+#         print('[dataset_builder] loading cached id-maps …')
+#         with open(META_CACHE, 'rb') as fh:
+#             return pickle.load(fh)
 
-    # create from scratch --------------------------------------------------
-    print('[dataset_builder] building id-maps …')
+#     # create from scratch --------------------------------------------------
+#     print('[dataset_builder] building id-maps …')
 
-    aut2idx, ven2idx = {}, {}
-    paper2idx, idx2paper = {}, [] # list as mapping table
+#     aut2idx, ven2idx = {}, {}
+#     paper2idx, idx2paper = {}, [] # list as mapping table
 
-    for pid, node in tqdm(paper_json.items(), desc='scan json'):
-        # papers -----------------------------------------------------------
-        if node['features']['is_core'] == 0: # important, only choose around ~ 9k papers
-            continue
-        if pid not in paper2idx:
-            paper2idx[pid] = len(idx2paper)
-            idx2paper.append(pid)
-        # authors ----------------------------------------------------------
-        for aid in node['neighbors']['author']:
-            if aid not in aut2idx:
-                aut2idx[aid] = len(aut2idx)
-        # venues -----------------------------------------------------------
-        ven = node['features']['Venue']
-        if ven not in ven2idx:
-            ven2idx[ven] = len(ven2idx)
-    # print the sizes of the mappings (papers, authors, venues)
-    print(f'[dataset_builder]   ⇒ {len(paper2idx):,} papers')
-    print(f'[dataset_builder]   ⇒ {len(aut2idx):,} authors')
-    print(f'[dataset_builder]   ⇒ {len(ven2idx):,} venues')
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    with open(META_CACHE, 'wb') as fh:
-        pickle.dump((paper2idx, aut2idx, ven2idx), fh)
+#     for pid, node in tqdm(paper_json.items(), desc='scan json'):
+#         # papers -----------------------------------------------------------
+#         if node['features']['is_core'] == 0: # important, only choose around ~ 9k papers
+#             continue
+#         if pid not in paper2idx:
+#             paper2idx[pid] = len(idx2paper)
+#             idx2paper.append(pid)
+#         # authors ----------------------------------------------------------
+#         for aid in node['neighbors']['author']:
+#             if aid not in aut2idx:
+#                 aut2idx[aid] = len(aut2idx)
+#         # venues -----------------------------------------------------------
+#         ven = node['features']['Venue']
+#         if ven not in ven2idx:
+#             ven2idx[ven] = len(ven2idx)
+#     # print the sizes of the mappings (papers, authors, venues)
+#     print(f'[dataset_builder]   ⇒ {len(paper2idx):,} papers')
+#     print(f'[dataset_builder]   ⇒ {len(aut2idx):,} authors')
+#     print(f'[dataset_builder]   ⇒ {len(ven2idx):,} venues')
+#     os.makedirs(CACHE_DIR, exist_ok=True)
+#     with open(META_CACHE, 'wb') as fh:
+#         pickle.dump((paper2idx, aut2idx, ven2idx), fh)
 
-    return paper2idx, aut2idx, ven2idx
+#     return paper2idx, aut2idx, ven2idx
 
-PAPER2IDX, AUT2IDX, VEN2IDX = load_or_init_mappings() # this line is not used in the code
+# PAPER2IDX, AUT2IDX, VEN2IDX = load_or_init_mappings() # this line is not used in the code
 
 ACTIVE_PAPERS  : list[str] = []
 ACTIVE_AUTHS   : list[str] = []
@@ -114,7 +114,7 @@ def build_snapshot(up_to_year: int, L: int = 5) -> HeteroData:
                  if n['features']['is_core'] == 1
                  and n['features']['PubYear'] <= up_to_year]
 
-    for pid in sorted(paper_ids, key=lambda p: PAPER2IDX[p]):
+    for pid in sorted(paper_ids):
         _assign_local_id(PAPER_LIDX_OF, ACTIVE_PAPERS, pid)
         n = paper_json[pid]
         for aid in n['neighbors']['author']:
@@ -194,12 +194,25 @@ def build_snapshot(up_to_year: int, L: int = 5) -> HeteroData:
     # --------------------------------------------------------------- #
     # author → paper
     a_src, a_dst = [], []
+    author_order_info = {}  # Store author order for each paper
+    
     for pid in paper_ids:
         p = PAPER_LIDX_OF[pid]
-        for aid in paper_json[pid]['neighbors']['author']:
-            a_src.append(AUTH_LIDX_OF[aid]);  a_dst.append(p)
+        node = paper_json[pid]
+        
+        # Store author order information
+        author_order_info[p] = []
+        
+        for i, aid in enumerate(node['neighbors']['author']):
+            a_src.append(AUTH_LIDX_OF[aid])
+            a_dst.append(p)
+            author_order_info[p].append((AUTH_LIDX_OF[aid], i))  # (author_idx, order)
+    
     data['author', 'writes', 'paper'].edge_index   = torch.tensor([a_src, a_dst])
     data['paper',  'written_by', 'author'].edge_index = torch.tensor([a_dst, a_src])
+    
+    # Store author order information in the graph
+    data['paper'].author_order = author_order_info
 
     # paper → paper
     p_src, p_dst = [], []

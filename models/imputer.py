@@ -27,17 +27,28 @@ class WeightedImputer(nn.Module):
         Collect neighbour indices *in the publication year* snapshot.
 
         Returns a dict
-            { 'author': LongTensor,        # authors of the paper
+            { 'author': LongTensor,        # authors of the paper (in publication order)
               'venue' : LongTensor,        # venue of the paper
               'paper' : LongTensor }       # references (= cited papers)
         """
         neighbours = {}
 
         # 1) authors --------------------------------------------------------
-        src, dst = data['author', 'writes', 'paper'].edge_index.to(device)
-        mask = (dst == paper_id).nonzero(as_tuple=False).view(-1)
-        if mask.numel():
-            neighbours['author'] = src.index_select(0, mask)
+        # Use the stored author order information if available
+        if hasattr(data['paper'], 'author_order') and paper_id in data['paper'].author_order:
+            # Get authors in their original publication order
+            author_order_list = data['paper'].author_order[paper_id]
+            # Sort by order (second element of tuple) and extract author indices
+            sorted_authors = sorted(author_order_list, key=lambda x: x[1])
+            author_indices = torch.tensor([author_idx for author_idx, _ in sorted_authors], 
+                                        dtype=torch.long, device=device)
+            neighbours['author'] = author_indices
+        else:
+            # Fallback to edge index method (original behavior)
+            src, dst = data['author', 'writes', 'paper'].edge_index.to(device)
+            mask = (dst == paper_id).nonzero(as_tuple=False).view(-1)
+            if mask.numel():
+                neighbours['author'] = src.index_select(0, mask)
 
         # 2) venue ----------------------------------------------------------
         src, dst = data['paper', 'published_in', 'venue'].edge_index.to(device)
