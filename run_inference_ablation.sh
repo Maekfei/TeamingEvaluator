@@ -2,11 +2,11 @@
 
 # Create timestamp for unique log directory
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-LOG_DIR="experiment_starting_year_1_ablation_no_topic_model_drop_team_members_logs_${TIMESTAMP}_csp0.5_lr2e-2_wd5e-5_hd32_beta0_min1e-5_patience4_factor0.5_early8"
+LOG_DIR="experiment_starting_year_1_ablation_drop_team_members_logs_${TIMESTAMP}_csp0.5_lr2e-2_wd5e-5_hd32_beta0_min1e-5_patience4_factor0.5_early8"
 mkdir -p "$LOG_DIR"
 
-# Set up logging
-exec 1> >(tee -a "${LOG_DIR}/experiment_master.log")
+# Set up logging - redirect all output to log files
+exec 1> "${LOG_DIR}/experiment_master.log"
 exec 2>&1
 
 echo "Starting experiments at $(date)"
@@ -24,10 +24,10 @@ ABLATIONS=(
 )
 
 # List of CUDA devices to use (edit as needed)
-CUDA_DEVICES=(0 1 2 3 4)
+CUDA_DEVICES=(5 6 7)
 
 # Path to checkpoint
-CHECKPOINT="runs/20250619_001921_team/evaluated_model_epoch070_male0_0.682_male1_0.718_male2_0.736_male3_0.760_male4_0.767_team.pt"
+CHECKPOINT="runs/20250619_200645_team/evaluated_model_epoch040_male0_0.655_male1_0.678_male2_0.700_male3_0.717_male4_0.717_team.pt"
 
 # Function to run a single experiment
 run_experiment() {
@@ -52,7 +52,6 @@ run_experiment() {
         --early_stop_patience 8 \
         --min_lr 1e-5 \
         --eval_mode team \
-        --input_feature_model 'drop topic' \
         --inference_time_author_dropping "$drop_fn" \
         --load_checkpoint "$CHECKPOINT" \
         --device cuda:$cuda_id \

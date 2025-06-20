@@ -99,7 +99,7 @@ def main():
                         help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
     parser.add_argument("--training_off", type=int, default=0,
                     help="If 1, training is turned off and the model is evaluated only. If 0, training is turned on and the model is trained.")
-    parser.add_argument("--input_feature_model", choices=['all features', 'drop topic'], default='all features',
+    parser.add_argument("--input_feature_model", choices=['all features', 'drop topic', 'drop authors'], default='all features',
                         help="During the training, Input feature model to use. Choose one of the two: 'all features' or 'drop topic'.")
     parser.add_argument("--inference_time_author_dropping", type=str, default=False,
                         help="Whether to drop authors from the training set. Default is False.")
@@ -290,7 +290,8 @@ def main():
                     horizons=[f"Year {i}" for i in range(5)],
                     bins=100,
                     plot_type="hist",
-                    save_path="./figs/Year1_full_dist_ci_hist.png",
+                    save_path=f"./figs/author_{args.inference_time_author_dropping}__topic_{args.input_feature_model}_Year1_full_dist_ci_hist.png",
+                    title=f"author_{args.inference_time_author_dropping}__topic_{args.input_feature_model}",
                     show=False)
                 
                 plot_yearly_aggregates(
@@ -299,7 +300,8 @@ def main():
                     horizons=[f"Year {i}" for i in range(5)],
                     agg_fn=np.median,
                     show_iqr=True,
-                    save_path="./figs/Year1_full_median_iqr.png",
+                    save_path=f"./figs/author_{args.inference_time_author_dropping}__topic_{args.input_feature_model}_Year1_full_median_iqr.png",
+                    title=f"author_{args.inference_time_author_dropping}__topic_{args.input_feature_model}",
                     show=False)
 
             return 0

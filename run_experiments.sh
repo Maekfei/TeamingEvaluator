@@ -2,7 +2,7 @@
 
 # Create timestamp for unique log directory
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-LOG_DIR="experiment_starting_year_1_logs_${TIMESTAMP}_csp0.5_lr2e-2_wd5e-5_hd32_beta0_min1e-5_patience4_factor0.5_early8_avgref33"
+LOG_DIR="experiment_starting_year_1_logs_${TIMESTAMP}_csp0.5_lr1e-2_wd5e-5_hd32_beta0_min1e-5_patience4_factor0.5_early8_avgref33"
 mkdir -p "$LOG_DIR"
 
 # Set up logging
@@ -22,7 +22,7 @@ run_experiment() {
     nohup python train.py \
         --train_years 2006 2014 \
         --test_years 2015 2018 \
-        --lr 2e-2 \
+        --lr 1e-2 \
         --weight_decay 5e-5 \
         --hidden_dim 32 \
         --epochs 800 \

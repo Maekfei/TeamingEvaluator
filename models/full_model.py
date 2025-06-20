@@ -102,9 +102,18 @@ class ImpactModel(nn.Module):
                 continue
 
             paper_ids = mask.nonzero(as_tuple=False).view(-1)
+            neigh_cache = [
+                self.imputer.collect_neighbours(data, int(pid), device)
+                for pid in paper_ids
+            ]
+            
             y_true    = data['paper'].y_citations[paper_ids].float()
             if self.input_feature_model == 'drop topic':
                 topic_all = torch.zeros(y_true.size(0), self.hidden_dim, device=device)
+            elif self.input_feature_model == 'drop authors':
+                for nc in neigh_cache:
+                    nc.pop('author', None)
+                topic_all = embeddings[t]['paper'][paper_ids]
             else:
                 topic_all = embeddings[t]['paper'][paper_ids]
 
@@ -113,10 +122,7 @@ class ImpactModel(nn.Module):
             # ----------------------------------------------------------
             # 3.1 cache neighbours of every paper in its publication yr
             # ----------------------------------------------------------
-            neigh_cache = [
-                self.imputer.collect_neighbours(data, int(pid), device)
-                for pid in paper_ids
-            ]
+
 
             # -------- cold-start augmentation --------------------------
             if self.cold_p > 0.0:
@@ -399,7 +405,7 @@ class ImpactModel(nn.Module):
                     else:
                         au_raw = [self.idx2aut[int(k)] for k in a_local]
                         # Apply ablation function if provided
-                        if author_drop_fn is not None: # we can no
+                        if author_drop_fn is not None: # 
                             au_raw = author_drop_fn(au_raw)
                         batch_teams.append((au_raw, topic_all[j]))
 
