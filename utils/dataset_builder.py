@@ -16,18 +16,17 @@ from tqdm import tqdm
 
 # ------------- paths ------------------------------------------------------
 # PAPER_JSON = 'data/paper_nodes_GNN_yearly.json.gz'
-PAPER_JSON = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/papernodes_remove0/paper_nodes_GNN_yearly_9_year_citation_counts.json.gz'
-EMB_NPZ = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/' \
-'tkg_embeddings_all_2024.npz'
+# PAPER_JSON = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/papernodes_remove0/paper_nodes_GNN_yearly_9_year_citation_counts.json.gz'
+# EMB_NPZ = '/data/jx4237data/Graph-CoT/Pipeline/2024_updated_data/tkg_embeddings_all_2024.npz'
 # # EMB_NPZ = 'data_examine/output_npz_openai/paper_embeddings_768_OpenAI.npz'
 # CACHE_DIR    = 'data/yearly_snapshots_specter2'          # *.pt files go here
 # CACHE_DIR    = 'data/yearly_snapshots_oai'          # *.pt files go here
 
-CACHE_DIR    = 'data/yearly_snapshots_specter2_starting_from_year_1'          # *.pt files go here
+# CACHE_DIR    = 'data/yearly_snapshots_specter2_starting_from_year_1'          # *.pt files go here
 
 
 
-META_CACHE   = os.path.join(CACHE_DIR, 'mappings_specter2_starting_from_year_1.pkl')   # id ↔ idx tables
+# META_CACHE   = os.path.join(CACHE_DIR, 'mappings_specter2_starting_from_year_1.pkl')   # id ↔ idx tables
 
 # ------------- load the paper JSON file ---------------------------------
 print('[dataset_builder] loading paper JSON …')

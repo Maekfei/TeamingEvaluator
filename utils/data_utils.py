@@ -13,6 +13,7 @@ def load_snapshots(path_pattern, years, L=5,
     If the file path_pattern.format(year) does not exist and
     generate_if_missing=True, a random snapshot is produced.
     """
+    print(f'Loading snapshots from {path_pattern}')
     snapshots = []  # list of HeteroData objects for each year
     for y in years:
         f = path_pattern.format(y) # e.g. "data/raw/G_{}.pt".format(y)

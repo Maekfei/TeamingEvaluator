@@ -64,7 +64,8 @@ def main():
     parser.add_argument("--hidden_dim", type=int, default=50)
     parser.add_argument("--epochs", type=int, default=150, help="Total number of epochs to train for.")
     parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
-    parser.add_argument("--lr", type=float, default=3*1e-2)
+    parser.add_argument("--lr", type=float, default=5e-3)
+    parser.add_argument("--wd", type=float, default=0)
     parser.add_argument("--beta", type=float, default=.5) # regularization parameter
     parser.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--cold_start_prob", type=float, default=0.3,
@@ -73,9 +74,9 @@ def main():
     parser.add_argument("--eval_mode", choices=["paper", "team"], default="paper",
                         help="'paper' = original evaluation  |  'team' = counter-factual")
 
-    parser.add_argument("--load_checkpoint", type=str, default="runs/20250529_154335_team/evaluated_model_epoch760_male0_0.6843_male1_0.8050_male2_0.7513_male3_0.7142_male4_0.6158_team.pt",
+    parser.add_argument("--load_checkpoint", type=str, default="",
                         help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
-    parser.add_argument("--training_off", type=bool, default=True,
+    parser.add_argument("--training_off", type=bool, default=False,
                     help="Whether to disable the training (if training_off is True, then we directly evaluate).")
     # ['all features', 'drop toic']
     # choose one of the two
@@ -112,18 +113,20 @@ def main():
         console.print(f"[bold]Device:[/bold] {args.device}")
         
         # snapshots = load_snapshots("data/yearly_snapshots_specter2/G_{}.pt", train_years + test_years)
-        snapshots = load_snapshots("data/yearly_snapshots_specter2_starting_from_year_1/G_{}.pt", train_years + test_years)
+        snapshots = load_snapshots("data/yearly_snapshots_specter2/G_{}.pt", train_years + test_years)
         snapshots = [g.to(args.device) for g in snapshots]
         
         author_raw_ids = snapshots[-1]['author'].raw_ids          # list[str]
         AUT2IDX = {aid: i for i, aid in enumerate(author_raw_ids)}
         idx2aut = author_raw_ids                                  # same order
 
-        metadata = snapshots[0].metadata()
+        metadata = snapshots[0].metadata()   # metadata: (['paper', 'author', 'venue'], [('author', 'writes', 'paper'),
+        # ('paper', 'written_by', 'author'), ('paper', 'cites', 'paper'), ('paper', 'cited_by', 'paper'),
+        # ('paper', 'published_in', 'venue'), ('venue', 'publishes', 'paper')])
         in_dims = {
-            "author": snapshots[0]["author"].x.size(-1),
-            "paper":  snapshots[0]["paper"].x_title_emb.size(-1),
-            "venue":  snapshots[0]["venue"].x.size(-1),
+            "author": snapshots[0]["author"].x.size(-1),           # 768
+            "paper":  snapshots[0]["paper"].x_title_emb.size(-1),  # 768
+            "venue":  snapshots[0]["venue"].x.size(-1),            # 768  
         }
         model = ImpactModel(metadata,
                             in_dims,
@@ -135,7 +138,7 @@ def main():
                             input_feature_model=args.input_feature_model,
                             args=args,
                             ).to(args.device)
-        optimizer = Adam(model.parameters(), lr=args.lr)
+        optimizer = Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
 
         start_epoch = 1
         loaded_checkpoint_args_info = "None"

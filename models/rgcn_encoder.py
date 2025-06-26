@@ -85,8 +85,8 @@ class RGCNEncoder(nn.Module):
                 if (edge_index.numel() == 0
                     or x_dict[src].size(0) == 0
                     or x_dict[dst].size(0) == 0):
-                    continue
-                    
+                    # continue
+                    raise ValueError(f"Empty edge_index for edge type '{etype_str}'")
 
                 # dummy relation-id vector (because num_relations = 1)
                 # edge_type = edge_index.new_zeros(edge_index.size(1))
