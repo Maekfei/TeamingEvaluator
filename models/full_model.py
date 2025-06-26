@@ -101,14 +101,14 @@ class ImpactModel(nn.Module):
             if mask.sum() == 0:           # nothing to train / evaluate for that year
                 continue
 
-            paper_ids = mask.nonzero(as_tuple=False).view(-1)
+            paper_ids = mask.nonzero(as_tuple=False).view(-1) # get the paper ids of the current year's papers
             neigh_cache = [
                 self.imputer.collect_neighbours(data, int(pid), device)
                 for pid in paper_ids
-            ]
+            ] # get the papers' authors, references, and venue.
             
             y_true    = data['paper'].y_citations[paper_ids].float()
-            if self.input_feature_model == 'drop topic':
+            if self.input_feature_model == 'drop topic': # here can be problematic by setting the topic vector to zero.
                 topic_all = torch.zeros(y_true.size(0), self.hidden_dim, device=device)
             elif self.input_feature_model == 'drop authors':
                 for nc in neigh_cache:
@@ -136,7 +136,6 @@ class ImpactModel(nn.Module):
             # 3.2 build sequence  [t-1, …, t-history]
             # ----------------------------------------------------------
 
-            # Need to check the logic below, we need to update this part.
             seq_steps = []
             for k in range(self.history + 1): # k = 0 … 5
                 yr = t - k                                        # t … t-5
@@ -401,7 +400,7 @@ class ImpactModel(nn.Module):
                     a_local = d.get('author', torch.empty(0, device=device, dtype=torch.long))
                     if a_local.numel() == 0:
                         # For papers with no authors, use empty list and zero topic
-                        batch_teams.append(([], torch.zeros(self.hidden_dim, device=device)))
+                        batch_teams.append(([], topic_all[j]))
                     else:
                         au_raw = [self.idx2aut[int(k)] for k in a_local]
                         # Apply ablation function if provided

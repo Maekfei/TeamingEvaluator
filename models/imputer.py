@@ -78,7 +78,7 @@ class WeightedImputer(nn.Module):
             return author_embeddings.squeeze(0)
         
         # Compute attention weights for each author
-        attention_weights = self.author_attention(author_embeddings)  # [num_authors, 1]
+        attention_weights = self.author_attention(author_embeddings) # [num_authors, hidden_dim]
         
         # Apply attention weights and sum
         weighted_authors = (author_embeddings * attention_weights).sum(dim=0)  # [hidden_dim]
@@ -100,7 +100,7 @@ class WeightedImputer(nn.Module):
         paper_id          : index of paper *in its publication year* snapshot.
                             Ignored when `predefined_neigh` is given.
         year_idx          : index of the snapshot we want to impute for
-                            (t-1, t-2, …).
+                            (t, t-2, …).
         snapshots         : list[HeteroData]
         embeddings        : list[dict] – output of the encoder for every year
         predefined_neigh  : optional neighbour dict produced by
