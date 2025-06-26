@@ -1,6 +1,7 @@
 import argparse, time
 import torch
-from torch.optim import Adam
+from torch.optim import Adam, AdamW
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from utils.data_utils import load_snapshots
 from models.full_model import ImpactModel
 from rich.console import Console
@@ -24,8 +25,8 @@ def save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values
 
     for i in range(num_male_values_to_include):
         try:
-            # Round to 4 decimal places for the filename
-            male_components.append(f"male{i}_{round(float(current_male_values[i]), 4):.4f}")
+            # Round to 3 decimal places for the filename
+            male_components.append(f"male{i}_{round(float(current_male_values[i]), 3):.3f}")
         except (ValueError, TypeError) as e:
             console.print(f"[yellow]Warning: Could not process MALE value at index {i} for filename component: '{current_male_values[i]}'. Error: {e}[/yellow]")
             male_components.append(f"male{i}_error")
@@ -55,37 +56,67 @@ def save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values
     except Exception as e:
         console.print(f"[red]Error saving evaluated model checkpoint: {e}[/red]")
 
+def drop_all(authors):
+    return []
+
+def drop_none(authors):
+    return authors
+
+def drop_first(authors):
+    return authors[1:]
+
+def drop_last(authors):
+    return authors[:-1]
+
+def keep_first(authors):
+    return authors[:1]
+
+def keep_last(authors):
+    return authors[-1:]
+
+def drop_first_and_last(authors):
+    return authors[1:-1]
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_years", nargs=2, type=int, required=True,
-                        help="e.g. 1995 2004 inclusive, the yeas to train on")
-    parser.add_argument("--test_years", nargs=2, type=int, required=True)
-    parser.add_argument("--hidden_dim", type=int, default=50)
-    parser.add_argument("--epochs", type=int, default=150, help="Total number of epochs to train for.")
+                        help="e.g. 2006 2014 inclusive, the yeas to train on")
+    parser.add_argument("--test_years", nargs=2, type=int, required=True,
+                        help="e.g. 2016 2018 inclusive, the yeas to test on")
+    parser.add_argument("--hidden_dim", type=int, default=32) # empirically found to be good
+    parser.add_argument("--epochs", type=int, default=240, help="Total number of epochs to train for.")
     parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
-    parser.add_argument("--lr", type=float, default=5e-3)
-    parser.add_argument("--wd", type=float, default=0)
-    parser.add_argument("--beta", type=float, default=.5) # regularization parameter
+    parser.add_argument("--lr", type=float, default=5e-3) # empirically found to be good
+    parser.add_argument("--beta", type=float, default=0) # regularization parameter, 0 is no regularization and works well
     parser.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
-    parser.add_argument("--cold_start_prob", type=float, default=0.3,
+    parser.add_argument("--cold_start_prob", type=float, default=0.5,
                         help="probability that a training paper is treated as "
-                             "venue/reference-free (cold-start calibration)")
+                             "venue/reference-free (cold-start calibration)") # 1 makes the training set 100% cold-start and 0 makes it 0% cold-start. 1 makes the training easier. 
     parser.add_argument("--eval_mode", choices=["paper", "team"], default="paper",
                         help="'paper' = original evaluation  |  'team' = counter-factual")
 
     parser.add_argument("--load_checkpoint", type=str, default="",
                         help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
-    parser.add_argument("--training_off", type=bool, default=False,
-                    help="Whether to disable the training (if training_off is True, then we directly evaluate).")
-    # ['all features', 'drop toic']
-    # choose one of the two
-    parser.add_argument("--input_feature_model", choices=['all features', 'drop topic'], default='all features',
-                        help="Input feature model to use. Choose one of the two: 'all features' or 'drop topic'.")
+    parser.add_argument("--training_off", type=int, default=0,
+                    help="If 1, training is turned off and the model is evaluated only. If 0, training is turned on and the model is trained.")
+    parser.add_argument("--input_feature_model", choices=['all features', 'drop topic', 'drop authors'], default='all features',
+                        help="During the training, Input feature model to use. Choose one of the two: 'all features' or 'drop topic'.")
     parser.add_argument("--inference_time_author_dropping", type=str, default=False,
                         help="Whether to drop authors from the training set. Default is False.")
-    parser.add_argument("--inference_time_num_author_dropping_k", type=int, default=0,
-                        help="Number of authors to drop from the training set. Default is 0.")
+    # parser.add_argument("--inference_time_num_author_dropping_k", type=int, default=0,
+    #                     help="Number of authors to drop from the training set. Default is 0.")
+    parser.add_argument("--weight_decay", type=float, default=5e-3,
+                        help="Weight decay for the optimizer. Default is 5e-3.")
+    parser.add_argument("--grad_clip", type=float, default=1.0,
+                        help="Gradient clipping value. Default is 1.0.")
+    parser.add_argument("--lr_patience", type=int, default=5,
+                        help="Patience for learning rate scheduler. Default is 5.")
+    parser.add_argument("--lr_factor", type=float, default=0.5,
+                        help="Factor to reduce learning rate by. Default is 0.5.")
+    parser.add_argument("--early_stop_patience", type=int, default=10,
+                        help="Patience for early stopping. Default is 10.")
+    parser.add_argument("--min_lr", type=float, default=1e-6,
+                        help="Minimum learning rate. Default is 1e-6.")
     args = parser.parse_args()
 
     run_dir_suffix = f"_{args.eval_mode}"
@@ -104,16 +135,15 @@ def main():
         console.print(f"Run directory: {run_dir}")
         console.print(f"Arguments: {args}")
         console.print(f"CUDA available: {torch.cuda.is_available()}")
-        
+        five_years_before_train_years = list(range(args.train_years[0] - 5, args.train_years[0]))
         train_years = list(range(args.train_years[0], args.train_years[1] + 1))
         test_years = list(range(args.test_years[0], args.test_years[1] + 1))
-
+        console.print(f"[bold]Five years before train years:[/bold] {five_years_before_train_years}")
         console.print(f"[bold]Train years:[/bold] {train_years}")
         console.print(f"[bold]Test years:[/bold]  {test_years}")
         console.print(f"[bold]Device:[/bold] {args.device}")
         
-        # snapshots = load_snapshots("data/yearly_snapshots_specter2/G_{}.pt", train_years + test_years)
-        snapshots = load_snapshots("data/yearly_snapshots_specter2/G_{}.pt", train_years + test_years)
+        snapshots = load_snapshots("data/yearly_snapshots_specter2_starting_from_year_1/G_{}.pt", five_years_before_train_years + train_years + test_years)
         snapshots = [g.to(args.device) for g in snapshots]
         
         author_raw_ids = snapshots[-1]['author'].raw_ids          # list[str]
@@ -138,7 +168,21 @@ def main():
                             input_feature_model=args.input_feature_model,
                             args=args,
                             ).to(args.device)
-        optimizer = Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+        optimizer = AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        
+        # Initialize learning rate scheduler
+        scheduler = ReduceLROnPlateau(
+            optimizer, 
+            mode='min', 
+            factor=args.lr_factor,
+            patience=args.lr_patience,
+            min_lr=args.min_lr,
+        )
+
+        # Early stopping variables
+        best_val_loss = float('inf')
+        early_stop_counter = 0
+        best_model_state = None
 
         start_epoch = 1
         loaded_checkpoint_args_info = "None"
@@ -206,19 +250,36 @@ def main():
             with torch.no_grad():
                 current_male_values = None
                 current_rmsle_values = None
+                if args.inference_time_author_dropping=='no author':
+                    drop_fn = drop_all
+                elif args.inference_time_author_dropping=='all authors':
+                    drop_fn = drop_none
+                elif args.inference_time_author_dropping=='drop_first':
+                    drop_fn = drop_first
+                elif args.inference_time_author_dropping=='drop_last':
+                    drop_fn = drop_last
+                elif args.inference_time_author_dropping=='keep_first':
+                    drop_fn = keep_first
+                elif args.inference_time_author_dropping=='keep_last':
+                    drop_fn = keep_last
+                elif args.inference_time_author_dropping=='drop_first_and_last':
+                    drop_fn = drop_first_and_last
+                else:
+                    drop_fn = None
 
                 if args.eval_mode == "paper":
                     male, rmsle, mape = model.evaluate(
                         snapshots,
-                        list(range(len(train_years), len(train_years)+len(test_years))),
+                        list(range(len(train_years) + 5, len(train_years)+len(test_years) + 5)), # 5 is the first year of the training data
                         start_year=train_years[0]
                     )
                 else:  # counter-factual
                     male, rmsle, mape, y_true, y_predict = model.evaluate_team(
                         snapshots,
-                        list(range(len(train_years), len(train_years)+len(test_years))),
+                        list(range(len(train_years) + 5, len(train_years)+len(test_years) + 5)), # 5 is the first year of the training data
                         start_year=train_years[0],
-                        return_raw=True
+                        return_raw=True,
+                        author_drop_fn=drop_fn
                     )
                 
                 
@@ -231,7 +292,8 @@ def main():
                     horizons=[f"Year {i}" for i in range(5)],
                     bins=100,
                     plot_type="hist",
-                    save_path="./figs/ours_dist_all_years_ci_hist.png",
+                    save_path=f"./figs/author_{args.inference_time_author_dropping}__topic_{args.input_feature_model}_Year1_full_dist_ci_hist.png",
+                    title=f"author_{args.inference_time_author_dropping}__topic_{args.input_feature_model}",
                     show=False)
                 
                 plot_yearly_aggregates(
@@ -240,7 +302,8 @@ def main():
                     horizons=[f"Year {i}" for i in range(5)],
                     agg_fn=np.median,
                     show_iqr=True,
-                    save_path="./figs/median_iqr.png",
+                    save_path=f"./figs/author_{args.inference_time_author_dropping}__topic_{args.input_feature_model}_Year1_full_median_iqr.png",
+                    title=f"author_{args.inference_time_author_dropping}__topic_{args.input_feature_model}",
                     show=False)
 
             return 0
@@ -252,73 +315,88 @@ def main():
             console.save_text(log_file_path, clear=False)
             model.train()
             optimizer.zero_grad()
-            # for the forward pass, we need to pass the snapshots for the training years, not only the idx, but the specific year, so add the first specific year as one element
-            loss, log = model(snapshots, list(range(len(train_years))), train_years[0])
+            
+            # Training step
+            loss, log = model(snapshots, list(range(5, 5 + len(train_years))), train_years[0])
             loss.backward()
+            
+            # Gradient clipping
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
+            
             optimizer.step()
-
             log_items_str = "  ".join(f"{k}:{v:.4f}" for k, v in log.items())
             console.log(f"Epoch {epoch:03d}  Loss: {loss.item():.4f}  {log_items_str}")
-
-            if epoch % 20 == 0 or epoch == args.epochs:
+            # Validation step every 10 epochs
+            if epoch % 10 == 0 or epoch == args.epochs or epoch == 1:
                 model.eval()
                 with torch.no_grad():
-                    current_male_values = None
-                    current_rmsle_values = None
-
                     if args.eval_mode == "paper":
                         male, rmsle, mape = model.evaluate(
                             snapshots,
-                            list(range(len(train_years), len(train_years)+len(test_years))),
+                            list(range(len(train_years) + 5, len(train_years)+len(test_years) + 5)),
                             start_year=train_years[0]
                         )
                     else:  # counter-factual
-                        male, rmsle, mape = model.evaluate_team(
+                        male, rmsle, mape, y_true, y_predict = model.evaluate_team(
                             snapshots,
-                            list(range(len(train_years), len(train_years)+len(test_years))),
-                            start_year=train_years[0]
+                            list(range(len(train_years) + 5, len(train_years)+len(test_years) + 5)),
+                            start_year=train_years[0],
+                            return_raw=True
                         )
                     
-                    current_male_values = male.tolist() if hasattr(male, 'tolist') else male
-                    current_rmsle_values = rmsle.tolist() if hasattr(rmsle, 'tolist') else rmsle
-
-                    if not isinstance(current_male_values, list): current_male_values = [current_male_values]
-                    if not isinstance(current_rmsle_values, list): current_rmsle_values = [current_rmsle_values]
+                    # Print detailed metrics for each year
+                    console.print(f"\n[bold]Epoch {epoch:03d} Validation Results:[/bold]")
+                    console.print("[bold]Year-wise MALE:[/bold]")
+                    for i, m in enumerate(male):
+                        console.print(f"  Year {i+1}: {m:.4f}")
+                    print(f"male: {male}")
+                    console.print("[bold]Year-wise RMSLE:[/bold]")
+                    for i, r in enumerate(rmsle):
+                        console.print(f"  Year {i+1}: {r:.4f}")
+                    print(f"rmsle: {rmsle}")
+                    # console.print("[bold]Year-wise MAPE:[/bold]")
+                    # for i, m in enumerate(mape):
+                    #     console.print(f"  Year {i+1}: {m:.4f}")
                     
-                    console.print(f"[green]Eval Epoch {epoch:03d} ({args.eval_mode})[/green] "
-                                  f"MALE {current_male_values}  RMSLE {current_rmsle_values} MAPE {mape}")
+                    # Use RMSLE as validation metric for learning rate scheduling
+                    val_metric = rmsle.mean().item()
+                    
+                    # Update learning rate
+                    scheduler.step(val_metric)
+                    # current learning rate
+                    print(f"current learning rate: {optimizer.param_groups[0]['lr']}")
+                    # Early stopping check
+                    if val_metric < best_val_loss:
+                        best_val_loss = val_metric
+                        early_stop_counter = 0
+                        best_model_state = model.state_dict()
+                        # Save best model
+                        best_model_path = os.path.join(run_dir, f"best_model_epoch{epoch:03d}.pt")
+                        torch.save({
+                            'epoch': epoch,
+                            'model_state_dict': best_model_state,
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'val_loss': best_val_loss,
+                            'male': male.tolist(),
+                            'rmsle': rmsle.tolist(),
+                            'mape': mape.tolist(),
+                            'args': args
+                        }, best_model_path)
+                    else:
+                        early_stop_counter += 1
+                        if early_stop_counter >= args.early_stop_patience:
+                            console.print(f"[yellow]Early stopping triggered at epoch {epoch}. Best validation loss: {best_val_loss:.4f}[/yellow]")
+                            # Restore best model
+                            model.load_state_dict(best_model_state)
+                            break
 
-                    if loss is not None: 
-                        save_evaluated_model_checkpoint(model, optimizer, epoch, current_male_values, current_rmsle_values, args, loss.item(), run_dir, console)
 
-                    if current_male_values and len(current_male_values) > 0:
-                        metric_to_track = float(current_male_values[0])  
-                        
-                        if metric_to_track < best_male_metric:
-                            best_male_metric = metric_to_track
-                            best_epoch_val = epoch
-                            
-                            if best_model_path and os.path.exists(best_model_path):
-                                try:
-                                    os.remove(best_model_path)
-                                    console.print(f"[grey50]Removed old best model: {best_model_path}[/grey50]")
-                                except OSError as e:
-                                    console.print(f"[yellow]Could not remove old best model: {e}[/yellow]")
-                                    
-                            best_model_filename = f"best_model_epoch{epoch:03d}_male{best_male_metric:.4f}_{args.eval_mode}.pt"
-                            best_model_path = os.path.join(run_dir, best_model_filename)
-                            
-                            torch.save({
-                                'epoch': epoch,
-                                'model_state_dict': model.state_dict(),
-                                'optimizer_state_dict': optimizer.state_dict(),
-                                'loss': loss.item() if loss is not None else None,
-                                'eval_male': current_male_values,
-                                'eval_rmsle': current_rmsle_values,
-                                'args': args
-                            }, best_model_path)
-                            console.print(f"[blue]New best model saved: {best_model_path} "
-                                          f"(MALE: {best_male_metric:.4f} at epoch {best_epoch_val})[/blue]")
+
+                # Save evaluated model checkpoint with detailed metrics
+                save_evaluated_model_checkpoint(
+                    model, optimizer, epoch, male.tolist() if 'male' in locals() else None, 
+                    rmsle.tolist() if 'rmsle' in locals() else None, args, loss.item(), run_dir, console
+                )
 
         final_model_filename = f"final_model_epoch{args.epochs:03d}_{args.eval_mode}.pt" 
         actual_last_epoch = epoch if 'epoch' in locals() and start_epoch <= args.epochs else args.epochs
@@ -341,10 +419,10 @@ def main():
             console.print(f"No training performed in this run. Final model not saved. (start_epoch: {start_epoch}, args.epochs: {args.epochs})")
 
         if best_model_path:
-            console.print(f"Best performing model (Epoch {best_epoch_val}) from this run retained at: {best_model_path} "
-                          f"with MALE: {best_male_metric:.4f}")
+            console.print(f"Best performing model (Epoch {actual_last_epoch}) from this run retained at: {best_model_path} "
+                          f"with Val Loss: {best_val_loss:.4f}")
         else:
-            console.print("[yellow]No best model was saved based on MALE metric during evaluation steps for this run.[/yellow]")
+            console.print("[yellow]No best model was saved based on Val Loss during training for this run.[/yellow]")
 
     finally:
         console.save_text(log_file_path, clear=False)

@@ -21,10 +21,11 @@ def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
                                         confidence_level: float = 0.95,
                                         n_bootstrap: int = 100,
                                         save_path: str | None = None,
+                                        title: str | None = None,
                                         show: bool = True):
     """
     Creates 1×L panel of KDE plots or histograms comparing prediction vs. truth with confidence intervals.
-    Uses log-transformed x-axis: log1p(x + 1.0)
+    Uses log-transformed x-axis: log1p(x)
 
     Parameters
     ----------
@@ -38,7 +39,7 @@ def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
     show           : call plt.show(); set False if running head-less
     """
     if horizons is None:
-        horizons = [f"Year {i} "  for i in range(y_true.shape[1])]
+        horizons = [f"Year {i} "  for i in range(1, y_true.shape[1] + 1)]
 
     L = len(horizons)
     fig, axes = plt.subplots(1, L, figsize=(4 * L, 3), sharey=True)
@@ -49,12 +50,41 @@ def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
 
     alpha = 1 - confidence_level
     
+    # Calculate average total five-year citation counts
+    total_true_5yr = np.sum(y_true, axis=1)  # Sum across all years for each paper
+    total_pred_5yr = np.sum(y_pred, axis=1)  # Sum across all years for each paper
+    avg_total_true_5yr = np.mean(total_true_5yr)
+    avg_total_pred_5yr = np.mean(total_pred_5yr)
+    
+    # Calculate median total five-year citation counts
+    median_total_true_5yr = np.median(total_true_5yr)
+    median_total_pred_5yr = np.median(total_pred_5yr)
+    
+    # Calculate log values
+    log_avg_total_true_5yr = np.log1p(avg_total_true_5yr)
+    log_avg_total_pred_5yr = np.log1p(avg_total_pred_5yr)
+    log_median_total_true_5yr = np.log1p(median_total_true_5yr)
+    log_median_total_pred_5yr = np.log1p(median_total_pred_5yr)
+    
+    # Print the results for easy copying
+    print(f"\n=== Average Total Five-Year Citation Counts ===")
+    print(f"GT_AVG_total_five_year_Citation_Counts: {avg_total_true_5yr:.4f}")
+    print(f"GT_AVG_total_five_year_Citation_Counts (log): {log_avg_total_true_5yr:.4f}")
+    print(f"Pred_AVG_total_five_year_Citation_Counts: {avg_total_pred_5yr:.4f}")
+    print(f"Pred_AVG_total_five_year_Citation_Counts (log): {log_avg_total_pred_5yr:.4f}")
+    print(f"\n=== Median Total Five-Year Citation Counts ===")
+    print(f"GT_MEDIAN_total_five_year_Citation_Counts: {median_total_true_5yr:.4f}")
+    print(f"GT_MEDIAN_total_five_year_Citation_Counts (log): {log_median_total_true_5yr:.4f}")
+    print(f"Pred_MEDIAN_total_five_year_Citation_Counts: {median_total_pred_5yr:.4f}")
+    print(f"Pred_MEDIAN_total_five_year_Citation_Counts (log): {log_median_total_pred_5yr:.4f}")
+    print(f"===============================================\n")
+    
     for h in range(L):
         ax = axes[h]
         
-        # Transform data using log1p(x + 1.0)
-        y_true_transformed = torch.log1p(torch.tensor(y_true[:, h]) + 1.0).numpy()
-        y_pred_transformed = torch.log1p(torch.tensor(y_pred[:, h]) + 1.0).numpy()
+        # Transform data using log1p(x)
+        y_true_transformed = torch.log1p(torch.tensor(y_true[:, h])).numpy()
+        y_pred_transformed = torch.log1p(torch.tensor(y_pred[:, h])).numpy()
         
         if plot_type.lower() == "kde":
             # Plot main KDE on transformed data
@@ -125,11 +155,20 @@ def plot_pred_true_distributions_with_ci(y_true: np.ndarray,
         exit()
 
         ax.set_title(horizons[h])
-        ax.set_xlabel("log1p(Citation count + 1)")
+        ax.set_xlabel("log1p(Citation count)")
         ax.set_ylabel("Density")
         ax.legend()
 
-    fig.suptitle("Predicted vs. True citation-count distributions with Confidence Intervals (Log-transformed)", fontsize=16)
+    # Add annotations for average total five-year citation counts
+    annotation_text = f"GT_AVG_total_five_year_Citation_Counts: {avg_total_true_5yr:.2f} (log: {log_avg_total_true_5yr:.2f})\n"
+    annotation_text += f"Pred_AVG_total_five_year_Citation_Counts: {avg_total_pred_5yr:.2f} (log: {log_avg_total_pred_5yr:.2f})"
+    
+    # Position annotation in the top-left corner of the figure
+    fig.text(0.02, 0.98, annotation_text, transform=fig.transFigure, 
+             fontsize=10, verticalalignment='top', 
+             bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+    fig.suptitle(f"{title} Predicted vs. True citation-count distributions with Confidence Intervals (Log-transformed)", fontsize=16)
     fig.tight_layout()
 
     if save_path is not None:
@@ -158,13 +197,14 @@ def plot_yearly_aggregates(y_true: np.ndarray,
                            agg_fn=np.median,
                            show_iqr: bool = True,
                            save_path: str | None = None,
+                           title: str | None = None,
                            show: bool = True):
     """
     One panel, x-axis = forecast horizon, y-axis = agg_fn(citations).
     Draws True vs Pred with optional shaded IQR bands.
     """
     if horizons is None:
-        horizons = [f"Year {i}" for i in range(y_true.shape[1])]
+        horizons = [f"Year {i}" for i in range(1, y_true.shape[1] + 1)]
 
     L  = len(horizons)
     x  = np.arange(L)
@@ -195,16 +235,55 @@ def plot_yearly_aggregates(y_true: np.ndarray,
         ax.fill_between(x + dx, q25_pred, q75_pred,
                         color='tab:orange', alpha=0.20)
 
+    # Calculate average total five-year citation counts
+    total_true_5yr = np.sum(y_true, axis=1)  # Sum across all years for each paper
+    total_pred_5yr = np.sum(y_pred, axis=1)  # Sum across all years for each paper
+    avg_total_true_5yr = np.mean(total_true_5yr)
+    avg_total_pred_5yr = np.mean(total_pred_5yr)
+    
+    # Calculate median total five-year citation counts
+    median_total_true_5yr = np.median(total_true_5yr)
+    median_total_pred_5yr = np.median(total_pred_5yr)
+    
+    # Calculate log values
+    log_avg_total_true_5yr = np.log1p(avg_total_true_5yr)
+    log_avg_total_pred_5yr = np.log1p(avg_total_pred_5yr)
+    log_median_total_true_5yr = np.log1p(median_total_true_5yr)
+    log_median_total_pred_5yr = np.log1p(median_total_pred_5yr)
+    
+    # Print the results for easy copying
+    print(f"\n=== Average Total Five-Year Citation Counts ===")
+    print(f"GT_AVG_total_five_year_Citation_Counts: {avg_total_true_5yr:.4f}")
+    print(f"GT_AVG_total_five_year_Citation_Counts (log): {log_avg_total_true_5yr:.4f}")
+    print(f"Pred_AVG_total_five_year_Citation_Counts: {avg_total_pred_5yr:.4f}")
+    print(f"Pred_AVG_total_five_year_Citation_Counts (log): {log_avg_total_pred_5yr:.4f}")
+    print(f"\n=== Median Total Five-Year Citation Counts ===")
+    print(f"GT_MEDIAN_total_five_year_Citation_Counts: {median_total_true_5yr:.4f}")
+    print(f"GT_MEDIAN_total_five_year_Citation_Counts (log): {log_median_total_true_5yr:.4f}")
+    print(f"Pred_MEDIAN_total_five_year_Citation_Counts: {median_total_pred_5yr:.4f}")
+    print(f"Pred_MEDIAN_total_five_year_Citation_Counts (log): {log_median_total_pred_5yr:.4f}")
+    print(f"===============================================\n")
+
     # Cosmetics -----------------------------------------------------
     ax.set_xticks(x)
     ax.set_xticklabels(horizons)
     ax.set_xlabel("Forecast year")
     ax.set_ylabel(f"{agg_fn.__name__.capitalize()} citation count")
-    ax.set_title("Year-wise aggregated citation counts (Ours)", fontsize=16)
+    ax.set_title(f"{title} Year-wise aggregated citation counts (Ours)", fontsize=16)
     ax.legend(frameon=False)
     sns.despine(ax=ax)             # drop top/right spines
     ax.grid(alpha=.25, axis='y')
     ax.set_ylim(0, 10)
+    
+    # Add annotations for average total five-year citation counts
+    annotation_text = f"GT_AVG_total_five_year_Citation_Counts: {avg_total_true_5yr:.2f} (log: {log_avg_total_true_5yr:.2f})\n"
+    annotation_text += f"Pred_AVG_total_five_year_Citation_Counts: {avg_total_pred_5yr:.2f} (log: {log_avg_total_pred_5yr:.2f})"
+    
+    # Position annotation in the top-left corner of the plot
+    ax.text(0.02, 0.98, annotation_text, transform=ax.transAxes, 
+            fontsize=9, verticalalignment='top', 
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    
     fig.tight_layout()
 
     # Save / show ---------------------------------------------------

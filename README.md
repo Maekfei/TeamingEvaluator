@@ -8,9 +8,7 @@ Todos:
 
 1. add some visuals for detailed understanding of the citation prediction performance.
 
-2. add some relative metric, e.g., percent of citation change. now the evaluation is log scale, can try percentage.
-
-3. drop off some authors to see the performance change.
+2. drop off some authors to see the performance change.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
