@@ -27,11 +27,15 @@ class RGCNEncoder(nn.Module):
         self.lins = nn.ModuleDict()
         self.norms_initial = nn.ModuleDict() # For initial projection normalization
         # project every node type to hidden_dim (if needed)
-        for ntype, in_dim in in_dims.items():
-            if in_dim != hidden_dim:
+        for ntype, in_dims_ in in_dims.items():
+            if in_dims_ != hidden_dim:
                 # Changed bias to True to allow for non-zero output from zero input
-                self.lins[ntype] = nn.Linear(in_dim, hidden_dim, bias=True)
+                self.lins[ntype] = nn.Linear(in_dims_, hidden_dim, bias=True)
             self.norms_initial[ntype] = nn.BatchNorm1d(hidden_dim) # Add BatchNorm for initial projection
+
+        # Add a linear layer for projecting social features to hidden_dim
+        self.social_lin = nn.Linear(3, hidden_dim)  # 3 social features
+        self.norms_social = nn.BatchNorm1d(hidden_dim)
 
         self.convs = nn.ModuleList()
         self.norms_conv = nn.ModuleDict() # For normalization after each conv layer
@@ -96,6 +100,13 @@ class RGCNEncoder(nn.Module):
             if h.numel() > 0: # Only apply BatchNorm if there are nodes
                 h = self.norms_initial[ntype](h)
             x_dict[ntype] = h
+
+        # Add social embedding for authors
+        if 'author' in data.node_types and hasattr(data['author'], 'x_social'):
+            h_social = self.social_lin(data['author'].x_social)
+            if h_social.numel() > 0:
+                h_social = self.norms_social(h_social)
+            x_dict['author_social'] = h_social
 
         for i, hetero_layer in enumerate(self.convs): # type: HeteroConv
             out_dict = {k: [] for k in x_dict.keys()} # collect msg per dst
