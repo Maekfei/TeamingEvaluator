@@ -19,6 +19,8 @@ class ImpactModel(nn.Module):
         metadata,
         in_dims,
         hidden_dim=32,
+        num_layers=2, # number of RGCN layers
+        dropout=0.1, # dropout rate for the RGCN layers
         beta=0, # regularization parameter (temporal smoothing regularizer of the temporal graph, make sure the same papers are not too different in the two consecutive years)
         horizons=(1, 2, 3, 4, 5), # [1, 2, 3, 4, 5] yearly citation counts
         meta_types: tuple[str, ...] = ("author", "venue", "paper"),
@@ -29,7 +31,7 @@ class ImpactModel(nn.Module):
         args=None,
     ):
         super().__init__()
-        self.encoder = RGCNEncoder(metadata, in_dims, hidden_dim) # output: keys ('author', 'paper', 'venue'), values: embeddings. (num_nodes_of_that_type, hidden_dim)
+        self.encoder = RGCNEncoder(metadata, in_dims, hidden_dim, num_layers, dropout) # output: keys ('author', 'paper', 'venue'), values: embeddings. (num_nodes_of_that_type, hidden_dim)
         self.imputer = WeightedImputer(meta_types, hidden_dim) # impute to update the new paper embedding.
         self.generator = ImpactRNN(hidden_dim, rnn_layers=1)
         self.beta = beta

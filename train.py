@@ -82,17 +82,19 @@ def main():
     parser.add_argument("--train_years", nargs=2, type=int, required=True,
                         help="e.g. 2006 2014 inclusive, the yeas to train on")
     parser.add_argument("--test_years", nargs=2, type=int, required=True,
-                        help="e.g. 2016 2018 inclusive, the yeas to test on")
+                        help="e.g. 2015 2018 inclusive, the yeas to test on")
     parser.add_argument("--hidden_dim", type=int, default=32) # empirically found to be good
+    parser.add_argument("--num_layers", type=int, default=3, help="Number of RGCN layers")
+    parser.add_argument("--dropout", type=float, default=0.1, help="Dropout in the RGCN layers")
     parser.add_argument("--epochs", type=int, default=240, help="Total number of epochs to train for.")
     parser.add_argument("--batch_size", type=int, default=256)  # unused in v1
-    parser.add_argument("--lr", type=float, default=5e-3) # empirically found to be good
+    parser.add_argument("--lr", type=float, default=1e-2) # empirically found to be good
     parser.add_argument("--beta", type=float, default=0) # regularization parameter, 0 is no regularization and works well
     parser.add_argument("--device", default="cuda:0" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--cold_start_prob", type=float, default=0.5,
                         help="probability that a training paper is treated as "
                              "venue/reference-free (cold-start calibration)") # 1 makes the training set 100% cold-start and 0 makes it 0% cold-start. 1 makes the training easier. 
-    parser.add_argument("--eval_mode", choices=["paper", "team"], default="paper",
+    parser.add_argument("--eval_mode", choices=["paper", "team"], default="team",
                         help="'paper' = original evaluation  |  'team' = counter-factual")
 
     parser.add_argument("--load_checkpoint", type=str, default="",
@@ -105,18 +107,18 @@ def main():
                         help="Whether to drop authors from the training set. Default is False.")
     # parser.add_argument("--inference_time_num_author_dropping_k", type=int, default=0,
     #                     help="Number of authors to drop from the training set. Default is 0.")
-    parser.add_argument("--weight_decay", type=float, default=5e-3,
-                        help="Weight decay for the optimizer. Default is 5e-3.")
+    parser.add_argument("--weight_decay", type=float, default=5e-5,
+                        help="Weight decay for the optimizer. Default is 5e-5.")
     parser.add_argument("--grad_clip", type=float, default=1.0,
                         help="Gradient clipping value. Default is 1.0.")
-    parser.add_argument("--lr_patience", type=int, default=5,
+    parser.add_argument("--lr_patience", type=int, default=4,
                         help="Patience for learning rate scheduler. Default is 5.")
     parser.add_argument("--lr_factor", type=float, default=0.5,
                         help="Factor to reduce learning rate by. Default is 0.5.")
     parser.add_argument("--early_stop_patience", type=int, default=10,
                         help="Patience for early stopping. Default is 10.")
-    parser.add_argument("--min_lr", type=float, default=1e-6,
-                        help="Minimum learning rate. Default is 1e-6.")
+    parser.add_argument("--min_lr", type=float, default=1e-5,
+                        help="Minimum learning rate. Default is 1e-5.")
     args = parser.parse_args()
 
     run_dir_suffix = f"_{args.eval_mode}"
@@ -161,6 +163,8 @@ def main():
         model = ImpactModel(metadata,
                             in_dims,
                             hidden_dim=args.hidden_dim,
+                            num_layers=args.num_layers,
+                            dropout=args.dropout,
                             beta=args.beta,
                             cold_start_prob=args.cold_start_prob,
                             aut2idx=AUT2IDX,
