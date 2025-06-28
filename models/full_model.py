@@ -33,7 +33,7 @@ class ImpactModel(nn.Module):
         super().__init__()
         self.encoder = RGCNEncoder(metadata, in_dims, hidden_dim, num_layers, dropout) # output: keys ('author', 'paper', 'venue'), values: embeddings. (num_nodes_of_that_type, hidden_dim)
         self.imputer = WeightedImputer(meta_types, hidden_dim) # impute to update the new paper embedding.
-        self.generator = ImpactRNN(hidden_dim, rnn_layers=1)
+        self.generator = ImpactRNN(hidden_dim * 2, rnn_layers=1)  # input is now 2*hidden_dim
         self.beta = beta
         self.hidden_dim = hidden_dim
         self.cold_p = cold_start_prob
@@ -103,19 +103,36 @@ class ImpactModel(nn.Module):
             if mask.sum() == 0:           # nothing to train / evaluate for that year
                 continue
 
-            paper_ids = mask.nonzero(as_tuple=False).view(-1)
+            paper_ids = mask.nonzero(as_tuple=False).view(-1) # get the paper ids of the current year's papers
             neigh_cache = [
                 self.imputer.collect_neighbours(data, int(pid), device)
                 for pid in paper_ids
-            ]
+            ] # get the papers' authors, references, and venue.
             
             y_true    = data['paper'].y_citations[paper_ids].float()
+            # Compute mean topic and mean social embedding for this batch
+            mean_topic = embeddings[t]['paper'].mean(dim=0, keepdim=True)  # [1, hidden_dim]
+            mean_social = None
+            if 'author_social' in embeddings[t]:
+                mean_social = embeddings[t]['author_social'].mean(dim=0, keepdim=True)  # [1, hidden_dim]
+            
+            # Compute mean author embeddings for this batch
+            mean_author_topic = embeddings[t]['author'].mean(dim=0, keepdim=True)  # [1, hidden_dim]
+            mean_author_social = None
+            if 'author_social' in embeddings[t]:
+                mean_author_social = embeddings[t]['author_social'].mean(dim=0, keepdim=True)  # [1, hidden_dim]
+
             if self.input_feature_model == 'drop topic':
-                topic_all = torch.zeros(y_true.size(0), self.hidden_dim, device=device)
+                # Use mean topic embedding for ablation
+                topic_all = mean_topic.expand(y_true.size(0), -1).to(device)
             elif self.input_feature_model == 'drop authors':
-                for nc in neigh_cache:
-                    nc.pop('author', None)
+                # Don't remove authors from cache, let imputer handle mean replacement
                 topic_all = embeddings[t]['paper'][paper_ids]
+            elif self.input_feature_model == 'drop social':
+                # Use mean social embedding for ablation (for the social part)
+                topic_all = embeddings[t]['paper'][paper_ids]
+                # The imputer will need to know to use mean_social for the social part
+                # (handled in imputer if needed)
             else:
                 topic_all = embeddings[t]['paper'][paper_ids]
 
@@ -138,7 +155,6 @@ class ImpactModel(nn.Module):
             # 3.2 build sequence  [t-1, …, t-history]
             # ----------------------------------------------------------
 
-            # Need to check the logic below, we need to update this part.
             seq_steps = []
             for k in range(self.history + 1): # k = 0 … 5
                 yr = t - k                                        # t … t-5
@@ -149,13 +165,18 @@ class ImpactModel(nn.Module):
                                         snapshots,
                                         embeddings,
                                         predefined_neigh = neigh_cache[i],
-                                        topic_vec        = topic_all[i]
+                                        topic_vec        = topic_all[i],
+                                        drop_social      = (self.input_feature_model == 'drop social'),
+                                        mean_social      = mean_social,
+                                        drop_authors     = (self.input_feature_model == 'drop authors'),
+                                        mean_author_topic = mean_author_topic,
+                                        mean_author_social = mean_author_social
                                     )
                                     for i in range(N)
-                                ], dim=0)                                            # [N,H], each paper has a embedding of size H.
-                seq_steps.append(seq_k) # seq_k is a tensor of shape [N,H], from year t back to year t -5, from now to 5 years ago
+                                ], dim=0)                                            # [N,2*H], each paper has a embedding of size 2*H.
+                seq_steps.append(seq_k) # seq_k is a tensor of shape [N,2*H], from year t back to year t -5, from now to 5 years ago
             seq_steps = seq_steps[::-1] # reverse the sequence, in a chronological order.
-            V_p = torch.stack(seq_steps, dim=1) # [N,6,H]
+            V_p = torch.stack(seq_steps, dim=1) # [N,6,2*H]
             # 3.3 generate citation distribution -----------------------
             eta, mu, sigma = self.generator(V_p) 
             y_hat_cum = self.generator.predict_cumulative(
@@ -235,7 +256,13 @@ class ImpactModel(nn.Module):
 
             paper_ids = mask.nonzero(as_tuple=False).view(-1)
             y_true    = data['paper'].y_citations[paper_ids].float()
-            if self.input_feature_model == 'drop topic':
+            
+            # Handle inference-time topic dropping
+            if hasattr(self.args, 'inference_time_topic_dropping') and self.args.inference_time_topic_dropping == 'drop topic':
+                # Compute mean topic embedding for this batch
+                mean_topic = embeddings[t]['paper'].mean(dim=0, keepdim=True)  # [1, hidden_dim]
+                topic_all = mean_topic.expand(y_true.size(0), -1).to(device)
+            elif self.input_feature_model == 'drop topic':
                 topic_all = torch.zeros(y_true.size(0), self.hidden_dim, device=device)
             else:
                 topic_all = embeddings[t]['paper'][paper_ids]
@@ -257,13 +284,18 @@ class ImpactModel(nn.Module):
                                                 snapshots,
                                                 embeddings,
                                                 predefined_neigh = neigh_cache[i],
-                                                topic_vec        = topic_all[i]
+                                                topic_vec        = topic_all[i],
+                                                drop_social      = (self.input_feature_model == 'drop social'),
+                                                mean_social      = None,
+                                                drop_authors     = (self.input_feature_model == 'drop authors'),
+                                                mean_author_topic = None,
+                                                mean_author_social = None
                                             )
                                             for i in range(N)
-                                        ], dim=0)                               # [N,H]
+                                        ], dim=0)                               # [N,2*H]
                 seq_steps.append(seq_k)
             seq_steps = seq_steps[::-1]
-            V_p = torch.stack(seq_steps, dim=1)        # [N,6,H]
+            V_p = torch.stack(seq_steps, dim=1)        # [N,6,2*H]
 
             # 4) predict citation distribution
             eta, mu, sigma = self.generator(V_p)
@@ -296,7 +328,14 @@ class ImpactModel(nn.Module):
         plus the embeddings of the *same* authors in the previous years.
         """
         device = next(self.parameters()).device
-        if self.input_feature_model == 'drop topic':
+        
+        # Handle inference-time topic dropping
+        if hasattr(self.args, 'inference_time_topic_dropping') and self.args.inference_time_topic_dropping == 'drop topic':
+            # Compute mean topic embedding for this snapshot
+            embeddings = [self.encoder(g) for g in snapshots]
+            mean_topic = embeddings[current_year_idx]['paper'].mean(dim=0, keepdim=True)  # [1, hidden_dim]
+            topic_vec = mean_topic.squeeze(0).to(device)
+        elif self.input_feature_model == 'drop topic':
             topic_vec = torch.zeros(self.hidden_dim, device=device)
         else:
             topic_vec = topic_vec.to(device)
@@ -315,10 +354,19 @@ class ImpactModel(nn.Module):
             elif mode == 'keep_last' and len(author_ids) >= 1:
                 author_ids = [author_ids[-1]]
             elif mode == 'no author':
-                author_ids = []
+                # Don't remove authors, let imputer handle mean replacement
+                pass
 
         # Pre-encode all snapshots once for efficiency
         embeddings = [self.encoder(g) for g in snapshots]
+
+        # Compute mean author embeddings for 'no author' ablation
+        mean_author_topic = None
+        mean_author_social = None
+        if mode == 'no author':
+            mean_author_topic = embeddings[current_year_idx]['author'].mean(dim=0, keepdim=True)  # [1, hidden_dim]
+            if 'author_social' in embeddings[current_year_idx]:
+                mean_author_social = embeddings[current_year_idx]['author_social'].mean(dim=0, keepdim=True)  # [1, hidden_dim]
 
         # Build sequence using the same approach as forward method
         seq = []
@@ -335,11 +383,16 @@ class ImpactModel(nn.Module):
                 snapshots,
                 embeddings,
                 predefined_neigh={'author': author_indices},
-                topic_vec=topic_vec
+                topic_vec=topic_vec,
+                drop_social      = (self.input_feature_model == 'drop social'),
+                mean_social      = None,
+                drop_authors     = (self.input_feature_model == 'drop authors'),
+                mean_author_topic = mean_author_topic,
+                mean_author_social = mean_author_social
             )
             seq.append(v_k)
 
-        V_p = torch.stack(seq, 0).unsqueeze(0)  # [1, 6, H]
+        V_p = torch.stack(seq, 0).unsqueeze(0)  # [1, 6, 2*H]
         eta, mu, sigma = self.generator(V_p)
         cum = self.generator.predict_cumulative(
             self.horizons.to(device), eta, mu, sigma
@@ -375,7 +428,13 @@ class ImpactModel(nn.Module):
 
             paper_ids = mask.nonzero(as_tuple=False).view(-1)
             y_true = data['paper'].y_citations[paper_ids].float()
-            if self.input_feature_model == 'drop topic':
+            
+            # Handle inference-time topic dropping
+            if hasattr(self.args, 'inference_time_topic_dropping') and self.args.inference_time_topic_dropping == 'drop topic':
+                # Compute mean topic embedding for this batch
+                mean_topic = encs[t]['paper'].mean(dim=0, keepdim=True)  # [1, hidden_dim]
+                topic_all = mean_topic.expand(y_true.size(0), -1).to(device)
+            elif self.input_feature_model == 'drop topic':
                 topic_all = torch.zeros(y_true.size(0), self.hidden_dim, device=device)
             else:
                 topic_all = encs[t]['paper'][paper_ids]
@@ -403,7 +462,7 @@ class ImpactModel(nn.Module):
                     a_local = d.get('author', torch.empty(0, device=device, dtype=torch.long))
                     if a_local.numel() == 0:
                         # For papers with no authors, use empty list and zero topic
-                        batch_teams.append(([], torch.zeros(self.hidden_dim, device=device)))
+                        batch_teams.append(([], topic_all[j]))
                     else:
                         au_raw = [self.idx2aut[int(k)] for k in a_local]
                         # Apply ablation function if provided
@@ -472,15 +531,20 @@ class ImpactModel(nn.Module):
                     snapshots,
                     embeddings,
                     predefined_neigh={'author': self._get_author_indices_for_year(teams[i][0], yr, snapshots)},
-                    topic_vec=teams[i][1]
+                    topic_vec=teams[i][1],
+                    drop_social      = (self.input_feature_model == 'drop social'),
+                    mean_social      = None,
+                    drop_authors     = (self.input_feature_model == 'drop authors'),
+                    mean_author_topic = None,
+                    mean_author_social = None
                 )
                 for i in range(N)
-            ], dim=0)  # [N, H]
+            ], dim=0)  # [N, 2*H]
             
             seq_steps.append(seq_k)
 
         seq_steps = seq_steps[::-1]  # reverse to get chronological order
-        V_p = torch.stack(seq_steps, dim=1)  # [N, 6, H]
+        V_p = torch.stack(seq_steps, dim=1)  # [N, 6, 2*H]
 
         # --------------------------------------------------------------
         # Predict with ImpactRNN

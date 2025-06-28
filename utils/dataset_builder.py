@@ -105,6 +105,10 @@ def _assign_local_id(gid2lidx: dict, active_list: list, gid: str | int):
 # ------------- create one snapshot ---------------------------------------
 def build_snapshot(up_to_year: int, L: int = 5) -> HeteroData:
     print(f'[dataset_builder]   ⇒ building snapshot ≤ {up_to_year}')
+    # Path to the social info JSON for this year
+    social_info_path = f'/data/jx4237data/GNNteamingEvaluator/TeamingEvaluator/data_examine/author_social_info/author_social_info_{up_to_year}.json'
+    with open(social_info_path, 'r') as f:
+        author_social_info = json.load(f)
 
     # --------------------------------------------------------------- #
     # 1) register every node that exists up-to this year              #
@@ -187,6 +191,16 @@ def build_snapshot(up_to_year: int, L: int = 5) -> HeteroData:
 
     data['author'].x = x_author
     data['venue' ].x = x_venue
+    
+    x_social = torch.zeros(num_authors, 3)  # 3 features: num_papers, num_collaborators, seniority
+    for i, author_id in enumerate(ACTIVE_AUTHS):
+        info = author_social_info.get(author_id, None)
+        if info is not None:
+            x_social[i, 0] = info['num_papers']
+            x_social[i, 1] = info['num_collaborators']
+            x_social[i, 2] = info['seniority']
+        # else: leave as zeros (for authors with no info)
+    data['author'].x_social = x_social
 
     # --------------------------------------------------------------- #
     # 3) edges (use the local contiguous indices)                     #

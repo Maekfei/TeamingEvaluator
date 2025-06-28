@@ -101,12 +101,12 @@ def main():
                         help="Path to a .pt checkpoint file to load model and optimizer states for continuing training.")
     parser.add_argument("--training_off", type=int, default=0,
                     help="If 1, training is turned off and the model is evaluated only. If 0, training is turned on and the model is trained.")
-    parser.add_argument("--input_feature_model", choices=['all features', 'drop topic', 'drop authors'], default='all features',
-                        help="During the training, Input feature model to use. Choose one of the two: 'all features' or 'drop topic'.")
+    parser.add_argument("--input_feature_model", choices=['all features', 'drop topic', 'drop authors', 'drop social'], default='all features',
+                        help="During the training, Input feature model to use. Choose one of the options: 'all features', 'drop topic', 'drop authors', or 'drop social'.")
     parser.add_argument("--inference_time_author_dropping", type=str, default=False,
                         help="Whether to drop authors from the training set. Default is False.")
-    # parser.add_argument("--inference_time_num_author_dropping_k", type=int, default=0,
-    #                     help="Number of authors to drop from the training set. Default is 0.")
+    parser.add_argument("--inference_time_topic_dropping", type=str, default=False,
+                        help="Whether to drop topic at inference time. Options: False, 'drop topic'. Default is False.")
     parser.add_argument("--weight_decay", type=float, default=5e-5,
                         help="Weight decay for the optimizer. Default is 5e-5.")
     parser.add_argument("--grad_clip", type=float, default=1.0,
@@ -145,7 +145,7 @@ def main():
         console.print(f"[bold]Test years:[/bold]  {test_years}")
         console.print(f"[bold]Device:[/bold] {args.device}")
         
-        snapshots = load_snapshots("data/yearly_snapshots_specter2_starting_from_year_1/G_{}.pt", five_years_before_train_years + train_years + test_years)
+        snapshots = load_snapshots("data/yearly_snapshots_specter2_social_Info_starting_from_year_1/G_{}.pt", five_years_before_train_years + train_years + test_years)
         snapshots = [g.to(args.device) for g in snapshots]
         
         author_raw_ids = snapshots[-1]['author'].raw_ids          # list[str]

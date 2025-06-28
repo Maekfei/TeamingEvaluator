@@ -15,7 +15,7 @@ class WeightedImputer(nn.Module):
         })
         self.w['self'] = nn.Parameter(torch.tensor(1.0))
         self.author_attention = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.Linear(2* hidden_dim, hidden_dim // 2),
             nn.ReLU(),
             nn.Linear(hidden_dim // 2, 1),
             nn.Softmax(dim=0)
@@ -78,7 +78,7 @@ class WeightedImputer(nn.Module):
             return author_embeddings.squeeze(0)
         
         # Compute attention weights for each author
-        attention_weights = self.author_attention(author_embeddings)  # [num_authors, 1]
+        attention_weights = self.author_attention(author_embeddings) # [num_authors, hidden_dim]
         
         # Apply attention weights and sum
         weighted_authors = (author_embeddings * attention_weights).sum(dim=0)  # [hidden_dim]
@@ -92,7 +92,12 @@ class WeightedImputer(nn.Module):
         snapshots,
         embeddings,
         predefined_neigh: dict[str, torch.Tensor] | None = None,
-        topic_vec=None
+        topic_vec=None,
+        drop_social: bool = False,
+        mean_social: torch.Tensor = None,
+        drop_authors: bool = False,
+        mean_author_topic: torch.Tensor = None,
+        mean_author_social: torch.Tensor = None
     ):
         """
         Args
@@ -100,16 +105,22 @@ class WeightedImputer(nn.Module):
         paper_id          : index of paper *in its publication year* snapshot.
                             Ignored when `predefined_neigh` is given.
         year_idx          : index of the snapshot we want to impute for
-                            (t-1, t-2, …).
+                            (t, t-2, …).
         snapshots         : list[HeteroData]
         embeddings        : list[dict] – output of the encoder for every year
         predefined_neigh  : optional neighbour dict produced by
                             `collect_neighbours`.  Needed because the paper
                             itself is not present in earlier graphs.
+        topic_vec         : topic embedding for the paper
+        drop_social       : if True, use mean_social for the social part of author embedding
+        mean_social       : mean social embedding to use for ablation
+        drop_authors      : if True, use mean_author_topic and mean_author_social for all authors
+        mean_author_topic : mean author topic embedding to use for ablation
+        mean_author_social: mean author social embedding to use for ablation
 
         Returns
         -------
-        Tensor [hidden_dim] – imputed embedding v_{p, year_idx}
+        Tensor [2*hidden_dim] – imputed embedding v_{p, year_idx}
         """
         # data['paper'].y_year can get the publication year of the paper, we only need the papers published in year t.
         data = snapshots[year_idx]
@@ -126,7 +137,7 @@ class WeightedImputer(nn.Module):
 
         # ----- nothing to aggregate --------------------------------------
         if not neighbours:
-            return torch.zeros(embs['paper'].size(-1), device=device)
+            return torch.zeros(embs['paper'].size(-1) * 2, device=device)  # output is 2*hidden_dim
 
         # ----- weighted average  -----------------------------------------
         parts = []
@@ -137,22 +148,42 @@ class WeightedImputer(nn.Module):
             if ids.numel() == 0:
                 continue
             if ntype == 'author':
+                if drop_authors and mean_author_topic is not None and mean_author_social is not None:
+                    # Use mean embeddings for all authors
+                    author_topic = mean_author_topic.expand(ids.size(0), -1)
+                    author_social = mean_author_social.expand(ids.size(0), -1)
+                elif mean_author_topic is not None and mean_author_social is not None and ids.size(0) > 0:
+                    # Use mean embeddings for all authors (inference-time 'no author' case)
+                    author_topic = mean_author_topic.expand(ids.size(0), -1)
+                    author_social = mean_author_social.expand(ids.size(0), -1)
+                else:
+                    author_topic = embs['author'][ids]           # [num_authors, hidden_dim]
+                    if drop_social and mean_social is not None:
+                        # Use mean_social for all authors
+                        author_social = mean_social.expand(author_topic.size(0), -1)
+                    else:
+                        author_social = embs['author_social'][ids]   # [num_authors, hidden_dim]
+                author_embeddings = torch.cat([author_topic, author_social], dim=1)  # [num_authors, 2*hidden_dim]
                 # Use attention mechanism for authors
-                author_embeddings = embs[ntype][ids]  # [num_authors, hidden_dim]
                 aggregated_authors = self.aggregate_authors_with_attention(author_embeddings)
                 parts.append(aggregated_authors)
                 weights.append(self.w[ntype])
             else:
-                parts.append(embs[ntype][ids].mean(dim=0))
+                # For other types, expand to match output dim
+                emb = embs[ntype][ids].mean(dim=0)
+                emb = torch.cat([emb, torch.zeros_like(emb)], dim=0)  # [2*hidden_dim]
+                parts.append(emb)
                 weights.append(self.w[ntype])
 
         # --- add the paper's own embedding --------------------------------
         if topic_vec is not None:
-            parts.append(topic_vec)
+            # Expand topic_vec to 2*hidden_dim by concatenating zeros for social part
+            topic_vec_expanded = torch.cat([topic_vec, torch.zeros_like(topic_vec)], dim=0)
+            parts.append(topic_vec_expanded)
             weights.append(self.w['self'])
         
         if len(parts) == 0:
-            return torch.zeros(embs['paper'].size(-1), device=device)
+            return torch.zeros(embs['paper'].size(-1) * 2, device=device)
 
         # Normalize weights
         weights = torch.stack(weights)
